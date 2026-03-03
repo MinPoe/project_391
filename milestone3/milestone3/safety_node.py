@@ -32,7 +32,7 @@ class SafetyNode(Node):
     def velocity_callback(self, msg: Odometry) -> None:
         self.last_vx = abs(msg.twist.twist.linear.x)
 
-    def cam_callback(self, msg):
+    def cam_callback(self, msg) -> None:
         if self.kys:
             drive_msg = AckermannDriveStamped()
             drive_msg.drive.speed = 0.0
@@ -140,7 +140,7 @@ class SafetyNode(Node):
             self.speed_publisher.publish(drive_msg)
             self.get_logger().info(f"FULL BRAKE - Distance: {min_distance}m, TTC: {min_ttc:.2f}s")
 
-    def depth_image_to_numpy(self, msg: Image):
+    def depth_image_to_numpy(self, msg: Image) -> np.ndarray:
         if msg.encoding == '16UC1':
             dtype = np.uint16
         elif msg.encoding == '32FC1':
@@ -163,7 +163,7 @@ class SafetyNode(Node):
         return depth
 
 
-def main(args=None):
+def main(args=None) -> None:
     rclpy.init(args=args)
     safety_node = SafetyNode()
     rclpy.spin(safety_node)

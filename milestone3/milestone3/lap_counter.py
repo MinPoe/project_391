@@ -49,7 +49,7 @@ class LapCounter(Node):
         # normalize to 0-1 where 1 = most similar
         return 1 - (score / 100)
 
-    def log_status(self):
+    def log_status(self) -> None:
         self.get_logger().info(f'Similarity: {self.last_similarity:.3f} | near_start: {self.near_start} | Lap Number: {self.lap_count}')
 
     def cam_callback(self, msg) -> None: 
@@ -94,7 +94,7 @@ class LapCounter(Node):
             self.kys_latched = True
 
 
-def main(args=None):
+def main(args=None) -> None:
     rclpy.init(args=args)
     node = LapCounter()
     rclpy.spin(node)

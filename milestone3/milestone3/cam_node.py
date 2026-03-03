@@ -78,7 +78,7 @@ class CamNode(Node):
     def speed_callback(self, msg) -> None:
         self.speed = msg.drive.speed
 
-def cam_filter_path(img):
+def cam_filter_path(img) -> (np.ndarray, bool):
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     kernel = np.ones((9, 9), np.uint8)
@@ -101,7 +101,7 @@ def cam_filter_path(img):
 
     return (mask, success)
 
-def get_target(img, target_row=400):
+def get_target(img, target_row=400) -> (float, float, bool):
 
     row = img[target_row,:]
     indices = np.argwhere(row > 0)
@@ -109,7 +109,7 @@ def get_target(img, target_row=400):
         return (0, target_row, True)
     return (np.mean(indices), target_row, False)
 
-def main(args=None):
+def main(args=None) -> None:
     rclpy.init(args=args)
     cam_node = CamNode()
     rclpy.spin(cam_node)
