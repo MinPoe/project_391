@@ -20,9 +20,17 @@ class CamNode(Node):
         self.run = 0
         self.depth_img = None
 
+        self.K_p = self.declare_parameter('K_p', 1.5).value
+        self.K_i = self.declare_parameter('K_i', 0.0).value
+        self.K_d = self.declare_parameter('K_d', 0.05).value
+
+        self.K_p = self.get_parameter('K_p').get_parameter_value().double_value
+        self.K_i = self.get_parameter('K_i').get_parameter_value().double_value
+        self.K_d = self.get_parameter('K_d').get_parameter_value().double_value
+
         self.bridge = cv_bridge.CvBridge()
 
-        self.pid = PID(K_p=1.5, K_i=0.0, K_d=0.05)
+        self.pid = PID(K_p=self.K_p, K_i=self.K_i, K_d=self.K_d)
 
         self.kys_latched = False
         self.speed = 0.0
@@ -46,7 +54,7 @@ class CamNode(Node):
 
         x_target = x - (img_w / 2)
 
-        angle = - np.arctan2(x_target, y) - 0.2
+        angle = - np.arctan2(x_target, y) - 0.2 #bias to the right to get a good view of the track
 
         self.get_logger().info(f'angle: {angle}')
         
@@ -65,11 +73,11 @@ class CamNode(Node):
         self.drive_pub.publish(drive_msg)
 
 
-        if self.run == 5:
-            cv2.imwrite('img.png', path_img)
+        # if self.run == 5:
+        #     cv2.imwrite('img.png', path_img)
             # cv2.imwrite('depth_image.png', self.depth_img)
 
-        self.run += 1
+        # self.run += 1
     
     def kys_callback(self, msg) -> None:
         if msg.data:
@@ -78,7 +86,7 @@ class CamNode(Node):
     def speed_callback(self, msg) -> None:
         self.speed = msg.drive.speed
 
-def cam_filter_path(img) -> (np.ndarray, bool):
+def cam_filter_path(img) -> tuple[np.ndarray, bool]:
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     kernel = np.ones((9, 9), np.uint8)
@@ -101,7 +109,7 @@ def cam_filter_path(img) -> (np.ndarray, bool):
 
     return (mask, success)
 
-def get_target(img, target_row=400) -> (float, float, bool):
+def get_target(img, target_row=400) -> tuple[float, float, bool]:
 
     row = img[target_row,:]
     indices = np.argwhere(row > 0)
