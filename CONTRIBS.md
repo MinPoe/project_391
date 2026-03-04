@@ -1,7 +1,9 @@
 # Contributions
 
 ### Altair: 
-TODO
+- Implemented depth-based safety node using the depth camera
+- Tuned TTC params
+- Debugged braking behavior and stability issues
 
 ### Cameron:
 - Finished README + node graph
