@@ -21,7 +21,8 @@
 - code clean up
 
 ### Minori: 
-TODO
+- Second gen vision-based lap-counter (changed to ORB)
+- changes to new vision-based safety node to work with old TTC (from LIDAR-based)
 
 ### Nick:
 - Implemented first stage of lap_counter
