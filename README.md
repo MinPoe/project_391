@@ -1,15 +1,15 @@
 # Milestone 3 - On-Car Safe Reactive Driving using Computer Vision
 
 ## Overview
-This milestone 3 package builds on the previous milestones, implementing gap-following and AEB with Computer Vision. This milestone package also implements lap counting with a tunable parameter to control how many laps the car can do.
+This milestone 3 package builds on the previous milestones, implementing wall-following and AEB with Computer Vision. This milestone package also implements lap counting with a tunable parameter to control how many laps the car can do.
 
 The milestone1_py launch file runs the old AEB and wall-following nodes:
 `ros2 launch milestone2 milestone1_py.py`
 
-The milestone2_py launch file runs the old AEB and gap-following nodes:
+The milestone2_py launch file runs the old AEB and wall-following nodes:
 `ros2 launch milestone2 milestone2_py.py`
 
-The milestone3_py launch file runs the new AEB, gap-following, and lap counting nodes:
+The milestone3_py launch file runs the new AEB, wall-following, and lap counting nodes:
 `ros2 launch milestone3 milestone3_py.py`
 
 ## Milestone 3 Nodes
@@ -91,7 +91,7 @@ The milestone3_py launch file runs the new AEB, gap-following, and lap counting 
   - Test progressive braking stages by observing velocity when approaching an object
   - Verify full brake triggers both on TTC and distance threshold violations
   
-- Camera-based Gap following:
+- Camera-based Wall following:
   - Test on tracks and verify that it is running laps smoothly
   - Observe steering angle response is approximately proportional to PID gains
   - Verify the path detection filters remove noise without losing path information
@@ -116,20 +116,19 @@ The milestone3_py launch file runs the new AEB, gap-following, and lap counting 
 ## Parameter Tuning/Derivation Strategies:
 - Camera-based AEB:
   - Start with high TTC thresholds and lower them incrementally until consistent braking response is achieved
-  - Tune speed multipliers based on wheel slip and stopping distance observations
+    - Initially we started with 0.6s, but we realized it was a bit too high, so we lowered it to 0.5
+  - Tune speed multipliers and progressive braking stages based on stopping distance observations
+    - Multipliers: We started at 0.2 and 0.4 for pb1 and pb2 respectively, but we found that the car was still going too fast at high speeds, so we lowered these to 0.2 and 0.3 to allow for better braking.
+    - Stages: We started at 1.0 and 1.6 seconds for pb1 and pb2 respectively.We ended up lowering these to 0.7 and 1.3 to make the car slower and improve safety, since we experienced difficulty while testing
   - Set distance_threshold based on minimum safe stopping distance at maximum speed tested
-  - Validate TTC calculations by ensuring estimated distance and velocity produce reasonable TTC values
+    - Using the new camera, we had to increase the distance threshold from 0.35 to 0.5 to allow for more stopping distance. 0.35 would cause some collisions at high speeds.
   
-- Camera-based Gap following:
-  - PID variables remain the same from previous milestones
-  - Adjust image filtering parameters (kernel size, threshold value) based on path appearance in test environment
-  - Choose target row based on camera field of view
+- Camera-based Wall following:
+  - PID variables remain the same from previous milestones (these are the only tunable parameters)
   
 - Lap Counting:
-  - Adjust similarity thresholds  based on feature consistency at different positions on track during testing
-  - Increase lap_time debounce if false positives occur; decrease if detection is delayed
-  - Select reference image with defining features
-  - Test with varying number of matches if similarity scores are unstable
+  - We guess and tested with similarity thresholds, we originally started at 0.5 and 0.9, but we found that 0.7 and 0.9 worked the best to prevent false positives while still counting laps consistently.
+  - The lap count parameter is set based on how many laps the user wants to run the car for
 
 ## RQT Graph
 ![ROS graph](milestone3_graph.png)
@@ -143,14 +142,14 @@ source install/local_setup.bash
 ros2 launch milestone2 milestone1_py.py
 ```
 
-### Run the milestone 2 nodes (Old AEB + Gap following)
+### Run the milestone 2 nodes (Old AEB + Wall following)
 ```bash
 colcon build
 source install/local_setup.bash
 ros2 launch milestone2 milestone2_py.py
 ```
 
-### Run the milestone 3 nodes (New AEB + Gap following + Lap Counting)
+### Run the milestone 3 nodes (New AEB + Wall following + Lap Counting)
 ```bash
 colcon build
 source install/local_setup.bash
