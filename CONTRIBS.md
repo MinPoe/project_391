@@ -4,7 +4,9 @@
 TODO
 
 ### Cameron:
-TODO
+- Finished README + node graph
+- Ported over previous code and adjusted launch files/yaml files to work with new nodes
+- Added explicit return types in headers
 
 ### Hamzah:
 TODO
