@@ -10,7 +10,9 @@ TODO
 TODO
 
 ### Jacob:
-TODO
+- First gen cam following with color cam
+- debugged safety node
+- code clean up
 
 ### Minori: 
 TODO
