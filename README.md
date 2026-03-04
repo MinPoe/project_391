@@ -125,6 +125,7 @@ The milestone3_py launch file runs the new AEB, wall-following, and lap counting
   
 - Camera-based Wall following:
   - PID variables remain the same from previous milestones (these are the only tunable parameters)
+  - Had to adjust the steering angle subtracting 0.2 for the right side bias.
   
 - Lap Counting:
   - We guess and tested with similarity thresholds, we originally started at 0.5 and 0.9, but we found that 0.7 and 0.9 worked the best to prevent false positives while still counting laps consistently.
