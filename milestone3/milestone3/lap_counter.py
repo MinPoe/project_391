@@ -18,6 +18,10 @@ class LapCounter(Node):
         self.bridge = CvBridge()
         self.kys_latched = False
 
+        self.lap_count = self.declare_parameter('lap_count', 2).value
+
+        self.lap_count = self.get_parameter('').get_parameter_value().int_value
+
         self.orb = cv2.ORB_create()
         self.bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
@@ -87,7 +91,7 @@ class LapCounter(Node):
 
                 self.get_logger().info(f'Lap Number:  {self.lap_count:.3f}')
 
-        if self.lap_count == 2: # hardcoded lap number to KYS latch
+        if self.lap_count == self.lap_count:
             kys_msg = Bool()
             kys_msg.data = True
             self.kys_publisher.publish(kys_msg)
