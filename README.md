@@ -77,14 +77,13 @@ The milestone3_py launch file runs the new AEB, gap-following, and lap counting 
 - `pb1_speed_mult` (float): multiplier to apply current speed when first stage of progressive braking is triggered
 - `pb2_speed_mult` (float): multiplier to apply current speed when second stage of progressive braking is triggered
 - `distance_threshold` (meters): absolute distance threshold for emergency braking (regardless of TTC)
+- `timer_period_threshold` (seconds): minimum time between lap count increments to prevent false positives
 
 ### cam_node
 - `K_p, K_i, K_d` (floats): PID controller gains (ROS parameters; tunable via config or `ros2 param set`)
 
 ### lap_counter
-- `lap_time` (seconds): debounce time to prevent multiple lap increments from a single pass
-- `similarity_threshold` (float): cosine similarity threshold to consider the car as being at the start line
-- `lap_limit` (int): number of laps to complete before triggering kill switch 
+- `lap_count` (int): number of laps to complete before triggering kill switch 
 
 ## General Testing Strategies
 - Camera-based AEB:
@@ -133,7 +132,7 @@ The milestone3_py launch file runs the new AEB, gap-following, and lap counting 
   - Test with varying number of matches if similarity scores are unstable
 
 ## RQT Graph
-![ROS graph]()
+![ROS graph](milestone3_graph.png)
 
 ## How to Run
 
