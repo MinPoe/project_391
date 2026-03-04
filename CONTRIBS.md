@@ -20,4 +20,6 @@ TODO
 TODO
 
 ### Nick:
-TODO
+- Implemented first stage of lap_counter
+- Iteratively tested params for TTC and cam node to optimize performance
+- Helped debug safety node
