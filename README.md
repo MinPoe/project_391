@@ -32,7 +32,7 @@ The milestone3_py launch file runs the new AEB, gap-following, and lap counting 
 3) An absolute distance threshold provides emergency stopping for cases where velocity is very low or zero (This was in the old AEB, but stopping distance has to be adjusted due to new technology).
 4) RGB-D depth frames are processed every camera frame cycle rather than LiDAR scan cycles. 
 
-### 2) cam_node (Gap Following)
+### 2) cam_node (Wall Following)
 **Input**
 - `/camera/color/image_raw` (Image)
 - `/kys` (Bool)
@@ -80,7 +80,7 @@ The milestone3_py launch file runs the new AEB, gap-following, and lap counting 
 - `timer_period_threshold` (seconds): minimum time between lap count increments to prevent false positives
 
 ### cam_node
-- `K_p, K_i, K_d` (floats): PID controller gains (ROS parameters; tunable via config or `ros2 param set`)
+- `K_p, K_i, K_d` (floats): PID controller gains
 
 ### lap_counter
 - `lap_count` (int): number of laps to complete before triggering kill switch 
@@ -159,12 +159,20 @@ ros2 launch milestone2 milestone3_py.py
 
 ### Change parameters
 ```bash
-# AEB node (edit config/safety_params.yaml and update thresholds)
+# AEB node 
 ros2 param set /safety_node ttc_pb1 <value>
+ros2 param set /safety_node ttc_pb2 <value>
+ros2 param set /safety_node ttc_fb <value>
+ros2 param set /safety_node pb1_speed_mult <value>
+ros2 param set /safety_node pb2_speed_mult <value>
 ros2 param set /safety_node distance_threshold <value>
 
-# Gap following node (edit config/gap_follow_params.yaml for PID gains)
+# Wall following node 
 ros2 param set /cam_node K_p <value>
+ros2 param set /cam_node K_i <value>
 ros2 param set /cam_node K_d <value>
+
+# Lap counting node
+ros2 param set /lap_counter lap_count <value>
 ```
 ---
