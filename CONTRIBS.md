@@ -9,7 +9,9 @@ TODO
 - Added explicit return types in headers
 
 ### Hamzah:
-TODO
+- Safety node debugging
+- Added param callbacks
+- Implemented first stage of vision-based safety node
 
 ### Jacob:
 - First gen cam following with color cam
