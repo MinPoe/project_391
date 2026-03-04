@@ -5,5 +5,4 @@ safety_node:
     ttc_fb : 0.5
     pb1_speed_mult : 0.3
     pb2_speed_mult : 0.2
-    distance_threshold : 0.9
-    timer_period_seconds : 0.1
+    distance_threshold : 0.5

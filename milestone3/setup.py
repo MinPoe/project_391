@@ -28,9 +28,8 @@ setup(
             'wall_node = milestone3.wall_node:main',
             'gap_node = milestone3.gap_node:main',
             'cam_node = milestone3.cam_node:main',
-            'lap_counter = milestone3.lap_counter:main',
-            'safety_node_old = milestone3.safety_node_old:main',
-            'gap_node_old = milestone3.gap_node_old:main'
+            'cam_node_test = milestone3.cam_node_test:main',
+            'lap_counter = milestone3.lap_counter:main'
         ],
     },
 )

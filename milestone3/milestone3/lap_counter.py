@@ -7,9 +7,30 @@ from cv_bridge import CvBridge
 import numpy as np
 import time
 from std_msgs.msg import Bool
+from rcl_interfaces.msg import SetParametersResult
+from rclpy.parameter import Parameter
+from typing import List
 
 class LapCounter(Node): 
+    """
+    Vision-based lap counting controller.
+
+    Uses ORB feature descriptors to compare the current camera frame
+    against an initial reference frame captured at startup. When
+    similarity exceeds a defined threshold after leaving the start
+    region, a lap is counted.
+
+    A time-based debounce mechanism prevents false increments due
+    to oscillations near the start location.
+    """
     def __init__(self):
+        """
+        Initialize the lap counter node.
+
+        Sets up ROS publishers/subscribers, declares parameters,
+        initializes ORB feature extraction, and prepares internal
+        state variables for lap detection and stop latching.
+        """
         super().__init__('lap_counter_node')
 
         self.cam_sub = self.create_subscription(Image, '/camera/color/image_raw', self.cam_callback, 10)
@@ -18,9 +39,8 @@ class LapCounter(Node):
         self.bridge = CvBridge()
         self.kys_latched = False
 
-        self.lap_count = self.declare_parameter('lap_count', 2).value
-
-        self.lap_count = self.get_parameter('').get_parameter_value().int_value
+        self.lap_max = self.declare_parameter('lap_max', 2).value
+        self.add_on_set_parameters_callback(self.on_param_change)
 
         self.orb = cv2.ORB_create()
         self.bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
@@ -40,11 +60,36 @@ class LapCounter(Node):
         self.get_logger().info('Lap node started, waiting for first frame...')
 
     def get_descriptors(self, frame) -> np.ndarray:
+        """
+        Extract ORB feature descriptors from a frame.
+
+        Args:
+            frame (np.ndarray): BGR image frame.
+
+        Returns:
+            np.ndarray | None:
+                ORB descriptor array if features are found,
+                otherwise None.
+        """
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         _, descriptors = self.orb.detectAndCompute(gray, None)
         return descriptors
 
     def get_similarity(self, desc1, desc2) -> float:
+        """
+        Compute similarity score between two ORB descriptor sets.
+
+        Uses brute-force Hamming matching and averages the best
+        50 match distances. Score is normalized to approximately
+        [0, 1], where higher values indicate greater similarity.
+
+        Args:
+            desc1 (np.ndarray): Reference descriptors.
+            desc2 (np.ndarray): Current frame descriptors.
+
+        Returns:
+            float: Normalized similarity score.
+        """
         matches = self.bf.match(desc1, desc2)
         if len(matches) == 0:
             return 0.0
@@ -54,9 +99,32 @@ class LapCounter(Node):
         return 1 - (score / 100)
 
     def log_status(self) -> None:
+        """
+        Periodic status logger.
+
+        Logs current similarity score, whether the vehicle is
+        considered near the start position, and the current lap count.
+        """
         self.get_logger().info(f'Similarity: {self.last_similarity:.3f} | near_start: {self.near_start} | Lap Number: {self.lap_count}')
 
     def cam_callback(self, msg) -> None: 
+        """
+        Camera image callback.
+
+        Converts the ROS image to OpenCV format, extracts ORB
+        descriptors, and compares them to the reference frame.
+        Lap count increments when:
+
+            1. The vehicle leaves the start region (low similarity).
+            2. The vehicle re-enters the start region (high similarity).
+            3. A minimum time interval has passed since the last lap.
+
+        When lap_count reaches lap_max, a latched stop signal
+        is published.
+
+        Args:
+            msg (Image): Incoming RGB image message.
+        """
         if self.kys_latched:
             return
         
@@ -91,14 +159,36 @@ class LapCounter(Node):
 
                 self.get_logger().info(f'Lap Number:  {self.lap_count:.3f}')
 
-        if self.lap_count == self.lap_count:
+        if self.lap_count == self.lap_max:
             kys_msg = Bool()
             kys_msg.data = True
             self.kys_publisher.publish(kys_msg)
             self.kys_latched = True
 
+    def on_param_change(self, params: List[Parameter]) -> SetParametersResult:
+        """
+        Handle dynamic parameter updates.
+
+        Updates internal safety thresholds and configuration values when parameters
+        are changed at runtime via ROS2 parameter services.
+
+        Args:
+            params (List[Parameter]): List of updated parameters.
+
+        Returns:
+            SetParametersResult: Result indicating whether the update was successful.
+        """
+        for p in params:
+            if p.name == 'lap_max':
+                self.lap_max = int(p.value)
+
+        return SetParametersResult(successful=True)
+
 
 def main(args=None) -> None:
+    """
+    Entry point for the lap counter node.
+    """
     rclpy.init(args=args)
     node = LapCounter()
     rclpy.spin(node)
