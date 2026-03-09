@@ -1,4 +1,5 @@
-# before running the file run the command pip install pandas scikit-learn joblib
+# before running the file run the command 'pip install pandas scikit-learn joblib'
+# run data processing by running the command 'python preprocesssing/preprocess.py'
 import os
 import sys
 import subprocess
