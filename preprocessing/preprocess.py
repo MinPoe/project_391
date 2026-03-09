@@ -1,3 +1,4 @@
+# before running the file run the command pip install pandas scikit-learn joblib
 import os
 import sys
 import subprocess
