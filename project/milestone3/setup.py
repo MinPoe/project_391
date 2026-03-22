@@ -7,7 +7,7 @@ package_name = 'milestone3'
 setup(
     name=package_name,
     version='0.0.0',
-    packages=[package_name, 'bc'],
+    packages=[package_name, 'milestone3.bc'],
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -30,7 +30,7 @@ setup(
             'cam_node = milestone3.cam_node:main',
             'cam_node_test = milestone3.cam_node_test:main',
             'lap_counter = milestone3.lap_counter:main',
-            'bc_inference_node = bc.inference_node:main'
+            'bc_inference_node = milestone3.bc.inference_node:main'
         ],
     },
 )
