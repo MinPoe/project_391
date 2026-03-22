@@ -5,15 +5,13 @@ AckermannDriveStamped to /drive.
 
 Usage (standalone):
     ros2 run milestone3 bc_inference_node \
-        --ros-args -p model_path:=bc/bc_model.pth \
-                   -p scaler_lidar_path:=processed/processed_simulator/scaler_lidar.pkl \
-                   -p scaler_action_path:=processed/processed_simulator/scaler_action.pkl \
+        --ros-args -p model_path:=bc/bc_model_sim.pth \
+                   -p scalers_path:=processed/processed_simulator/scalers.npz \
                    -p max_speed:=1.0
 """
 
 import numpy as np
 import torch
-import joblib
 
 import rclpy
 from rclpy.node import Node
@@ -21,7 +19,7 @@ from sensor_msgs.msg import LaserScan
 from ackermann_msgs.msg import AckermannDriveStamped
 from std_msgs.msg import Bool
 
-from bc.model import BCNet
+from milestone3.bc.model import BCNet
 
 # Must match preprocessing constants
 LIDAR_STEP = 6
@@ -34,22 +32,22 @@ class BCInferenceNode(Node):
         super().__init__("bc_inference_node")
 
         # Parameters
-        self.declare_parameter("model_path", "bc/bc_model.pth")
-        self.declare_parameter("scaler_lidar_path", "processed/processed_simulator/scaler_lidar.pkl")
-        self.declare_parameter("scaler_action_path", "processed/processed_simulator/scaler_action.pkl")
+        self.declare_parameter("model_path", "bc/bc_model_sim.pth")
+        self.declare_parameter("scalers_path", "processed/processed_simulator/scalers.npz")
         self.declare_parameter("max_speed", 1.0)
 
         model_path = self.get_parameter("model_path").get_parameter_value().string_value
-        scaler_lidar_path = self.get_parameter("scaler_lidar_path").get_parameter_value().string_value
-        scaler_action_path = self.get_parameter("scaler_action_path").get_parameter_value().string_value
+        scalers_path = self.get_parameter("scalers_path").get_parameter_value().string_value
         self.max_speed = self.get_parameter("max_speed").get_parameter_value().double_value
 
-        # Load scalers (MinMaxScaler from preprocessing)
-        self.scaler_lidar = joblib.load(scaler_lidar_path)
-        self.scaler_action = joblib.load(scaler_action_path)
+        # Load scaler parameters from .npz (portable across numpy versions)
+        scalers = np.load(scalers_path)
+        self.lidar_scale = scalers["lidar_scale"].astype(np.float32)
+        self.lidar_min = scalers["lidar_min"].astype(np.float32)
+        self.action_scale = scalers["action_scale"].astype(np.float32)
+        self.action_min = scalers["action_min"].astype(np.float32)
 
-        # Determine number of LiDAR features from scaler
-        self.num_lidar = self.scaler_lidar.n_features_in_
+        self.num_lidar = len(self.lidar_scale)
         self.get_logger().info(f"LiDAR features: {self.num_lidar}")
 
         # Load model
@@ -82,7 +80,6 @@ class BCInferenceNode(Node):
 
         # Ensure the length matches what the scaler expects
         if len(downsampled) != self.num_lidar:
-            # Truncate or pad to match
             if len(downsampled) > self.num_lidar:
                 downsampled = downsampled[: self.num_lidar]
             else:
@@ -91,18 +88,17 @@ class BCInferenceNode(Node):
                     constant_values=MAX_RANGE,
                 )
 
-        # Normalize using the same scaler used during training
-        lidar_norm = self.scaler_lidar.transform(downsampled.reshape(1, -1))
+        # Normalize: X_scaled = X * scale + min  (MinMaxScaler formula)
+        lidar_norm = downsampled * self.lidar_scale + self.lidar_min
 
         # Inference
         with torch.no_grad():
-            x = torch.from_numpy(lidar_norm.astype(np.float32)).to(self.device)
-            pred = self.model(x).cpu().numpy()  # shape (1, 2)
+            x = torch.from_numpy(lidar_norm.reshape(1, -1)).to(self.device)
+            pred = self.model(x).cpu().numpy()[0]  # shape (2,)
 
-        # Denormalize action
-        action = self.scaler_action.inverse_transform(pred)[0]
-        steering_angle = float(action[0])
-        speed = float(action[1])
+        # Denormalize: X = (X_scaled - min) / scale
+        steering_angle = float((pred[0] - self.action_min[0]) / self.action_scale[0])
+        speed = float((pred[1] - self.action_min[1]) / self.action_scale[1])
 
         # Clamp speed
         speed = max(0.0, min(speed, self.max_speed))
