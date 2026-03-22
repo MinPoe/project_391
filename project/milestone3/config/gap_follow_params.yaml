@@ -1,0 +1,15 @@
+gap_node:
+  ros__parameters:
+    # PID gains
+    K_p: 3.0
+    K_i: 0.0
+    K_d: 0.02
+
+    # Gap-following configuration
+    target_distance: 0.6
+    max_speed: 0.8
+    min_speed: 0.4
+    K_speed: 1.0
+
+    # Kill switch latch
+    kys_latched: false
