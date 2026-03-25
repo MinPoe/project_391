@@ -1,9 +1,0 @@
-build/
-f1tenth_gym_ros/
-install/
-log/
-.vscode/
-data/
-processed/
-*.pth
-__pycache__/

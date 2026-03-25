@@ -19,7 +19,7 @@ from sensor_msgs.msg import LaserScan
 from ackermann_msgs.msg import AckermannDriveStamped
 from std_msgs.msg import Bool
 
-from milestone3.bc.model import BCNet
+from project.bc.model import BCNet
 
 # Must match preprocessing constants
 LIDAR_STEP = 6

@@ -2,12 +2,13 @@ import os
 from glob import glob
 from setuptools import setup
 
-package_name = 'milestone3'
+package_name = 'project'
 
 setup(
     name=package_name,
     version='0.0.0',
-    packages=[package_name, 'milestone3.bc'],
+    package_dir={package_name: 'nodes', 'project.bc': 'bc'},
+    packages=[package_name, 'project.bc'],
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -24,13 +25,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'safety_node = milestone3.safety_node:main',
-            'wall_node = milestone3.wall_node:main',
-            'gap_node = milestone3.gap_node:main',
-            'cam_node = milestone3.cam_node:main',
-            'cam_node_test = milestone3.cam_node_test:main',
-            'lap_counter = milestone3.lap_counter:main',
-            'bc_inference_node = milestone3.bc.inference_node:main'
+            'safety_node = project.safety_node:main',
+            'bc_inference_node = project.bc.inference_node:main'
         ],
     },
 )

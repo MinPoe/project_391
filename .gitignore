@@ -4,4 +4,7 @@ install/
 log/
 .vscode/
 data/
-processed/
+__pycache__/
+*.db3
+*.csv
+*.pkl

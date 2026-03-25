@@ -1,3 +1,0 @@
-lap_counter:
-  ros__parameters:
-    lap_max: 2

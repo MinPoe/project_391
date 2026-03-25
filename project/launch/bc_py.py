@@ -8,23 +8,22 @@ def generate_launch_description():
     return LaunchDescription([
         # safety node
         Node(
-            package='milestone3',
+            package='project',
             executable='safety_node',
             output='screen',
             parameters=[PathJoinSubstitution([
-                FindPackageShare('milestone3'), 'config', 'safety_params.yaml'])
+                FindPackageShare('project'), 'config', 'safety_params.yaml'])
             ],
         ),
         # BC inference node
         Node(
-            package='milestone3',
+            package='project',
             executable='bc_inference_node',
             output='screen',
             parameters=[{
-                'model_path': 'bc/bc_model.pth',
-                'scaler_lidar_path': 'processed/processed_simulator/scaler_lidar.pkl',
-                'scaler_action_path': 'processed/processed_simulator/scaler_action.pkl',
-                'max_speed': 1.0,
+                'model_path': 'bc/bc_model_sim.pth',
+                'scalers_path': 'processed/processed_simulator/scalers.npz',
+                'max_speed': 0.5,
             }],
         ),
     ])

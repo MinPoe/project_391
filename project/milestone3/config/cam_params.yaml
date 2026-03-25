@@ -1,5 +1,0 @@
-cam_node:
-  ros__parameters:
-    K_p: 1.5
-    K_d: 0.05
-    K_i: 0.0
