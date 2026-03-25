@@ -26,7 +26,7 @@ setup(
     entry_points={
         'console_scripts': [
             'safety_node = project.safety_node:main',
-            'bc_inference_node = project.bc.inference_node:main'
+            'bc_inference_node = project.bc_inference_node:main'
         ],
     },
 )
