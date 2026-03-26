@@ -181,13 +181,15 @@ class SafetyNode(Node):
 
     def drive_callback(self, msg: AckermannDriveStamped) -> None:
         """
-        Store latest commanded steering angle and speed.
+        Store latest commanded steering angle.
+
+        Speed comes from odometry (velocity_callback) so TTC uses the
+        car's *actual* velocity, not the commanded value.
 
         Args:
             msg (AckermannDriveStamped): Drive command message.
         """
         self.last_angle = msg.drive.steering_angle
-        self.last_vx = msg.drive.speed
 
     def velocity_callback(self, msg:Odometry) -> None:
         """

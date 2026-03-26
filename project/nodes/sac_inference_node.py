@@ -248,6 +248,13 @@ class SACInferenceNode(Node):
         self.prev_steering = steering
         self.step_count += 1
 
+        # Debug: log first 10 drive commands so we can confirm publishing
+        if self.step_count <= 10:
+            self.get_logger().info(
+                f"[DRIVE #{self.step_count}] steer={steering:.4f} speed={speed:.4f} "
+                f"stopped={self.stopped} action=[{action[0]:.3f},{action[1]:.3f}]"
+            )
+
         # --- SAC gradient step ---
         if self.training and self.step_count % self.update_every == 0:
             metrics = self.trainer.update()
@@ -276,6 +283,7 @@ class SACInferenceNode(Node):
         self.current_speed = abs(msg.twist.twist.linear.x)
 
     def kys_callback(self, msg: Bool):
+        self.get_logger().info(f"[KYS] received={msg.data} stopped={self.stopped}")
         if msg.data and not self.stopped:
             self.stopped = True
             self._end_episode(done=True)
