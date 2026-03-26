@@ -32,13 +32,17 @@ class BCInferenceNode(Node):
         super().__init__("bc_inference_node")
 
         # Parameters
-        self.declare_parameter("model_path", "bc/bc_model_sim.pth")
+        self.declare_parameter("model_path", "bc/bc_model_sim.pth") # Change this path to either sim or physical
         self.declare_parameter("scalers_path", "processed/processed_simulator/scalers.npz")
         self.declare_parameter("max_speed", 1.0)
+        self.declare_parameter("min_speed", 0.5)
+        self.declare_parameter("safety_distance", 0.3)
 
         model_path = self.get_parameter("model_path").get_parameter_value().string_value
         scalers_path = self.get_parameter("scalers_path").get_parameter_value().string_value
         self.max_speed = self.get_parameter("max_speed").get_parameter_value().double_value
+        self.min_speed = self.get_parameter("min_speed").get_parameter_value().double_value
+        self.safety_distance = self.get_parameter("safety_distance").get_parameter_value().double_value
 
         # Load scaler parameters from .npz (portable across numpy versions)
         scalers = np.load(scalers_path)
@@ -50,8 +54,8 @@ class BCInferenceNode(Node):
         self.num_lidar = len(self.lidar_scale)
         self.get_logger().info(f"LiDAR features: {self.num_lidar}")
 
-        # Load model
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # Load model (CPU is fine for this small network)
+        self.device = torch.device("cpu")
         self.model = BCNet(num_lidar_rays=self.num_lidar).to(self.device)
         self.model.load_state_dict(torch.load(model_path, map_location=self.device))
         self.model.eval()
@@ -70,8 +74,21 @@ class BCInferenceNode(Node):
             self._publish_stop()
             return
 
-        # Downsample raw scan (keep every LIDAR_STEP-th ray)
         ranges = np.array(msg.ranges, dtype=np.float32)
+
+        # LiDAR-based emergency stop: check forward cone for obstacles
+        n = len(ranges)
+        forward_cone = ranges[n // 4 : 3 * n // 4]
+        forward_cone = forward_cone[np.isfinite(forward_cone)]
+        if len(forward_cone) > 0 and np.min(forward_cone) < self.safety_distance:
+            self.get_logger().warn(
+                f"EMERGENCY STOP: obstacle at {np.min(forward_cone):.2f}m"
+            )
+            self.stopped = True
+            self._publish_stop()
+            return
+
+        # Downsample raw scan (keep every LIDAR_STEP-th ray)
         downsampled = ranges[::LIDAR_STEP]
 
         # Clamp infinities / NaN to MAX_RANGE, clip to [0, MAX_RANGE]
@@ -101,7 +118,7 @@ class BCInferenceNode(Node):
         speed = float((pred[1] - self.action_min[1]) / self.action_scale[1])
 
         # Clamp speed
-        speed = max(0.0, min(speed, self.max_speed))
+        speed = max(self.min_speed, min(speed, self.max_speed))
 
         # Publish
         drive_msg = AckermannDriveStamped()

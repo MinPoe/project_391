@@ -7,8 +7,8 @@ package_name = 'project'
 setup(
     name=package_name,
     version='0.0.0',
-    package_dir={package_name: 'nodes', 'project.bc': 'bc'},
-    packages=[package_name, 'project.bc'],
+    package_dir={package_name: 'nodes', 'project.bc': 'bc', 'project.sac': 'sac'},
+    packages=[package_name, 'project.bc', 'project.sac'],
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
@@ -26,7 +26,8 @@ setup(
     entry_points={
         'console_scripts': [
             'safety_node = project.safety_node:main',
-            'bc_inference_node = project.bc_inference_node:main'
+            'bc_inference_node = project.bc_inference_node:main',
+            'sac_inference_node = project.sac_inference_node:main'
         ],
     },
 )
