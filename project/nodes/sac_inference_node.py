@@ -52,8 +52,7 @@ class SACInferenceNode(Node):
         self.declare_parameter("log_path", "sac/training_log.csv")
         self.declare_parameter("max_speed", 2.0)
         self.declare_parameter("min_speed", 0.5)
-        self.declare_parameter("max_steering", 0.4189)
-        self.declare_parameter("safety_distance", 0.3)
+        self.declare_parameter("max_steering", 0.4189)  # unused, kept for reference
         self.declare_parameter("training", True)
         self.declare_parameter("deterministic", False)
         # SAC hyper-parameters
@@ -74,7 +73,6 @@ class SACInferenceNode(Node):
         self.max_speed = self._dbl("max_speed")
         self.min_speed = self._dbl("min_speed")
         self.max_steering = self._dbl("max_steering")
-        self.safety_distance = self._dbl("safety_distance")
         self.training = self._bool("training")
         self.deterministic = self._bool("deterministic")
         lr = self._dbl("lr")
@@ -86,10 +84,12 @@ class SACInferenceNode(Node):
         self.warmup_steps = self._int("warmup_steps")
         self.save_every = self._int("save_every")
 
-        # ---- load LiDAR scalers ----
+        # ---- load scalers (same ones BC uses) ----
         scalers = np.load(scalers_path)
         self.lidar_scale = scalers["lidar_scale"].astype(np.float32)
         self.lidar_min = scalers["lidar_min"].astype(np.float32)
+        self.action_scale = scalers["action_scale"].astype(np.float32)
+        self.action_min = scalers["action_min"].astype(np.float32)
         self.num_lidar = len(self.lidar_scale)
         self.get_logger().info(f"LiDAR features: {self.num_lidar}")
 
@@ -131,7 +131,7 @@ class SACInferenceNode(Node):
 
         # ---- state tracking ----
         self.prev_state = None          # normalised LiDAR (for replay)
-        self.prev_action = None         # tanh-squashed [-1,1]
+        self.prev_action = None         # normalised [0,1]
         self.prev_raw_lidar = None      # metres (for reward)
         self.prev_steering = 0.0        # physical radians
         self.current_speed = 0.0        # from odom
@@ -186,18 +186,8 @@ class SACInferenceNode(Node):
 
         raw_ranges = np.array(msg.ranges, dtype=np.float32)
 
-        # --- forward-cone emergency stop ---
-        n = len(raw_ranges)
-        forward = raw_ranges[n // 4: 3 * n // 4]
-        forward = forward[np.isfinite(forward)]
-        if len(forward) > 0 and np.min(forward) < self.safety_distance:
-            self.get_logger().warn(
-                f"EMERGENCY STOP: obstacle at {np.min(forward):.2f}m"
-            )
-            self.stopped = True
-            self._end_episode(done=True)
-            self._publish_stop()
-            return
+        # Safety is handled entirely by the safety_node via /kys.
+        # No internal emergency-stop check here to avoid deadlocks.
 
         # --- preprocess LiDAR (same as BC) ---
         downsampled = raw_ranges[::LIDAR_STEP]
@@ -227,9 +217,9 @@ class SACInferenceNode(Node):
             self.episode_reward += reward
             self.episode_steps += 1
 
-        # --- select action ---
+        # --- select action (normalised [0, 1], same space as BC) ---
         if self.training and self.step_count < self.warmup_steps:
-            action = np.random.uniform(-1.0, 1.0, size=2).astype(np.float32)
+            action = np.random.uniform(0.0, 1.0, size=2).astype(np.float32)
         else:
             state_t = torch.from_numpy(state.reshape(1, -1)).to(
                 self.trainer.device
@@ -240,11 +230,10 @@ class SACInferenceNode(Node):
                 .numpy()[0]
             )
 
-        # --- map [-1, 1] -> physical ---
-        steering = float(np.clip(action[0], -1.0, 1.0)) * self.max_steering
-        speed = (float(np.clip(action[1], -1.0, 1.0)) + 1.0) / 2.0 * (
-            self.max_speed - self.min_speed
-        ) + self.min_speed
+        # --- denormalise with BC scalers:  X = (X_scaled - min) / scale ---
+        steering = float((action[0] - self.action_min[0]) / self.action_scale[0])
+        speed = float((action[1] - self.action_min[1]) / self.action_scale[1])
+        speed = max(self.min_speed, min(speed, self.max_speed))
 
         # --- publish ---
         drive_msg = AckermannDriveStamped()

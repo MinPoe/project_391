@@ -38,7 +38,6 @@ def generate_launch_description():
                 'update_every': 4,
                 'warmup_steps': 0,
                 'save_every': 5000,
-                'safety_distance': 0.3,
             }],
         ),
     ])

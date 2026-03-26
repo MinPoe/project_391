@@ -130,6 +130,8 @@ class BCInferenceNode(Node):
         if msg.data:
             self.stopped = True
             self.get_logger().info("Emergency stop latched")
+        else:
+            self.stopped = False
 
     def _publish_stop(self):
         drive_msg = AckermannDriveStamped()

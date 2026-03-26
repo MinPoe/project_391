@@ -8,10 +8,11 @@ LOG_STD_MAX = 2
 
 
 class SACActorNet(nn.Module):
-    """SAC Gaussian actor with tanh squashing.
+    """SAC Gaussian actor — outputs actions in [0, 1] (BC-normalised space).
 
     Same hidden architecture as BCNet (181 -> 256 -> 128) with separate
-    mean and log_std output heads.  Outputs actions in [-1, 1] via tanh.
+    mean and log_std output heads.  Actions are clamped to [0, 1] so they
+    can be denormalised with the same MinMaxScaler as the BC model.
     """
 
     def __init__(self, num_lidar_rays: int = 181, action_dim: int = 2):
@@ -29,21 +30,19 @@ class SACActorNet(nn.Module):
         return mean, log_std
 
     def sample(self, state: torch.Tensor):
-        """Sample action with reparameterization trick + tanh squashing.
+        """Sample action with reparameterization trick, clamped to [0, 1].
 
         Returns:
-            action  – tanh-squashed action in [-1, 1]
-            log_prob – corrected log-probability (scalar per sample)
-            mean    – raw mean (useful for logging)
+            action   – clamped action in [0, 1]  (BC-normalised space)
+            log_prob – Gaussian log-probability (scalar per sample)
+            mean     – raw mean (useful for logging)
         """
         mean, log_std = self.forward(state)
         std = log_std.exp()
         dist = Normal(mean, std)
-        x_t = dist.rsample()                       # reparameterized sample
-        action = torch.tanh(x_t)
-        # log-prob with Jacobian correction for tanh squashing
-        log_prob = dist.log_prob(x_t) - torch.log(1.0 - action.pow(2) + 1e-6)
-        log_prob = log_prob.sum(dim=-1, keepdim=True)
+        x_t = dist.rsample()
+        action = torch.clamp(x_t, 0.0, 1.0)
+        log_prob = dist.log_prob(x_t).sum(dim=-1, keepdim=True)
         return action, log_prob, mean
 
     def get_action(self, state: torch.Tensor, deterministic: bool = False):
@@ -51,9 +50,9 @@ class SACActorNet(nn.Module):
         with torch.no_grad():
             mean, log_std = self.forward(state)
             if deterministic:
-                return torch.tanh(mean)
+                return torch.clamp(mean, 0.0, 1.0)
             std = log_std.exp()
-            return torch.tanh(Normal(mean, std).sample())
+            return torch.clamp(Normal(mean, std).sample(), 0.0, 1.0)
 
     @classmethod
     def from_bc(cls, bc_weights_path: str, num_lidar_rays: int = 181,
@@ -61,8 +60,9 @@ class SACActorNet(nn.Module):
         """Create actor initialized from trained BC model weights.
 
         Hidden layers (LiDAR feature extraction) are copied exactly.
-        The mean head is seeded from the BC output layer.
-        The log_std head starts with small values (conservative exploration).
+        The mean head is seeded from the BC output layer so initial
+        actions match the BC policy.
+        The log_std head starts conservative (std ~ 0.14).
         """
         actor = cls(num_lidar_rays, action_dim)
         bc_sd = torch.load(bc_weights_path, map_location=device, weights_only=True)
@@ -73,7 +73,7 @@ class SACActorNet(nn.Module):
         actor.mean_head.weight.data.copy_(bc_sd["net.4.weight"])
         actor.mean_head.bias.data.copy_(bc_sd["net.4.bias"])
         nn.init.constant_(actor.log_std_head.weight, 0.0)
-        nn.init.constant_(actor.log_std_head.bias, -1.0)   # std ~ 0.37
+        nn.init.constant_(actor.log_std_head.bias, -2.0)   # std ~ 0.14
         return actor
 
 
