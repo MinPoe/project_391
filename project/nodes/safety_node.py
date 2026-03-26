@@ -101,10 +101,12 @@ class SafetyNode(Node):
 
         min_distance = np.min(danger_rays)
 
-        if self.last_vx == 0:
-            self.last_vx = 1.2
-
-        ttc = min_distance / self.last_vx if self.last_vx > 0 else float('inf')
+        # When stationary, TTC is meaningless — rely on distance_threshold only.
+        # The old fallback (fake vx=1.2) prevented the car from ever starting.
+        if self.last_vx < 0.01:
+            ttc = float('inf')
+        else:
+            ttc = min_distance / self.last_vx
 
         drive_msg = AckermannDriveStamped()
 
