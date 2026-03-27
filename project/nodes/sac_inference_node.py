@@ -30,6 +30,8 @@ from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import Odometry
 from ackermann_msgs.msg import AckermannDriveStamped
 from std_msgs.msg import Bool
+from geometry_msgs.msg import PoseWithCovarianceStamped
+import time
 
 from project.sac.model import SACActorNet, SACCriticNet
 from project.sac.train_sac import SACTrainer
@@ -67,6 +69,10 @@ class SACInferenceNode(Node):
         # Collision detection (replaces safety_node in sim)
         self.declare_parameter("collision_threshold", 0.3)
         self.declare_parameter("crash_cooldown_steps", 50)
+        # Reset pose after crash (sim only)
+        self.declare_parameter("reset_x", 0.0)
+        self.declare_parameter("reset_y", 0.0)
+        self.declare_parameter("reset_yaw", 0.0)
 
         # ---- read parameters ----
         bc_weights_path = self._str("bc_weights_path")
@@ -88,6 +94,9 @@ class SACInferenceNode(Node):
         self.save_every = self._int("save_every")
         self.collision_threshold = self._dbl("collision_threshold")
         self.crash_cooldown_steps = self._int("crash_cooldown_steps")
+        self.reset_x = self._dbl("reset_x")
+        self.reset_y = self._dbl("reset_y")
+        self.reset_yaw = self._dbl("reset_yaw")
 
         # ---- load scalers (same ones BC uses) ----
         scalers = np.load(scalers_path)
@@ -161,9 +170,17 @@ class SACInferenceNode(Node):
         self.kys_sub = self.create_subscription(
             Bool, "/kys", self.kys_callback, 10
         )
+        self.collision_sub = self.create_subscription(
+            Bool, "/collision", self.collision_callback, 10
+        )
         self.drive_pub = self.create_publisher(
             AckermannDriveStamped, "/drive", 10
         )
+        self.reset_pub = self.create_publisher(
+            PoseWithCovarianceStamped, "/initialpose", 10
+        )
+        self.collision_detected = False
+        self.episode_start_time = time.time()
 
     # ------------------------------------------------------------------ #
     #  Parameter helpers                                                  #
@@ -208,18 +225,21 @@ class SACInferenceNode(Node):
         # normalise
         state = downsampled * self.lidar_scale + self.lidar_min
 
-        # --- internal collision detection (replaces safety_node in sim) ---
+        # --- collision detection (sim /collision topic OR LiDAR fallback) ---
         n = len(raw_ranges)
         forward = raw_ranges[n // 4 : 3 * n // 4]
         forward = forward[np.isfinite(forward)]
-        crashed = (
+        lidar_crash = (
             len(forward) > 0
             and np.min(forward) < self.collision_threshold
             and self.steps_since_crash >= self.crash_cooldown_steps
         )
+        crashed = self.collision_detected or lidar_crash
 
-        if crashed and self.training:
-            self._end_episode(done=True)
+        if crashed:
+            if self.training:
+                self._end_episode(done=True)
+                self._log_episode()
             self.steps_since_crash = 0
             self.episode_count += 1
             self.get_logger().info(
@@ -230,12 +250,12 @@ class SACInferenceNode(Node):
                 f"total_steps={self.step_count} "
                 f"buffer={len(self.trainer.buffer)}"
             )
-            if self.training:
-                self._log_episode()
             self.episode_reward = 0.0
             self.episode_steps = 0
             self.prev_state = None
             self.prev_action = None
+            self._reset_car()
+            return
 
         self.steps_since_crash += 1
 
@@ -316,6 +336,11 @@ class SACInferenceNode(Node):
     def odom_callback(self, msg: Odometry):
         self.current_speed = abs(msg.twist.twist.linear.x)
 
+    def collision_callback(self, msg: Bool):
+        """Collision signal from the F1Tenth sim."""
+        if msg.data and time.time() - self.episode_start_time > 0.5:
+            self.collision_detected = True
+
     def kys_callback(self, msg: Bool):
         self.get_logger().info(f"[KYS] received={msg.data} stopped={self.stopped}")
         if msg.data and not self.stopped:
@@ -364,6 +389,28 @@ class SACInferenceNode(Node):
         msg.drive.speed = 0.0
         msg.drive.steering_angle = 0.0
         self.drive_pub.publish(msg)
+
+    def _reset_car(self):
+        """Teleport car back to start pose via /initialpose (sim only)."""
+        import math
+        # Stop the car first
+        self._publish_stop()
+        time.sleep(0.2)
+
+        # Teleport to start
+        msg = PoseWithCovarianceStamped()
+        msg.header.frame_id = "map"
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.pose.pose.position.x = self.reset_x
+        msg.pose.pose.position.y = self.reset_y
+        msg.pose.pose.orientation.z = math.sin(self.reset_yaw / 2.0)
+        msg.pose.pose.orientation.w = math.cos(self.reset_yaw / 2.0)
+        self.reset_pub.publish(msg)
+
+        # Wait for sim to process the reset
+        time.sleep(0.5)
+        self.collision_detected = False
+        self.episode_start_time = time.time()
 
     # ---- CSV training log ----
 
