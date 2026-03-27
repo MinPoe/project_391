@@ -60,7 +60,7 @@ class SACActorNet(nn.Module):
         actor.mean_head.weight.data.copy_(bc_sd["net.4.weight"])
         actor.mean_head.bias.data.copy_(bc_sd["net.4.bias"])
         nn.init.constant_(actor.log_std_head.weight, 0.0)
-        nn.init.constant_(actor.log_std_head.bias, -2.0)
+        nn.init.constant_(actor.log_std_head.bias, -3.5)  # std ~ 0.03, gentle exploration
         return actor
 
 

@@ -298,15 +298,17 @@ class SACInferenceNode(Node):
                 .numpy()[0]
             )
 
-        # --- denormalise action to physical steering + speed ---
+        # --- clamp + denormalise action to physical steering + speed ---
         if self.sb3_mode:
-            # SB3 actions are already physical (steer in ~[-0.4, 0.4], speed in ~[0, 4])
-            steering = float(action[0])
+            # SB3: actions are physical, clamp to action space bounds
+            steering = float(np.clip(action[0], -0.4, 0.4))
             speed = float(np.clip(action[1], 0.0, self.max_speed))
         else:
-            # BC scalers: X = (X_scaled - min) / scale
+            # BC: actions must be in [0, 1], then denormalise
+            action = np.clip(action, 0.0, 1.0)
             steering = float((action[0] - self.action_min[0]) / self.action_scale[0])
             speed = float((action[1] - self.action_min[1]) / self.action_scale[1])
+        # Never reverse, always at least min_speed forward
         speed = max(self.min_speed, min(speed, self.max_speed))
 
         # --- publish ---
