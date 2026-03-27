@@ -91,23 +91,37 @@ class SACInferenceNode(Node):
         self.reset_y = self._dbl("reset_y")
         self.reset_yaw = self._dbl("reset_yaw")
 
-        # ---- load scalers (same ones BC uses) ----
-        scalers = np.load(scalers_path)
-        self.lidar_scale = scalers["lidar_scale"].astype(np.float32)
-        self.lidar_min = scalers["lidar_min"].astype(np.float32)
-        self.action_scale = scalers["action_scale"].astype(np.float32)
-        self.action_min = scalers["action_min"].astype(np.float32)
-        self.num_lidar = len(self.lidar_scale)
-        self.get_logger().info(f"LiDAR features: {self.num_lidar}")
-
-        # ---- build / load networks ----
+        # ---- detect checkpoint format and set up accordingly ----
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.sb3_mode = False  # True when using SB3-converted weights
 
         if os.path.isfile(self.checkpoint_path):
+            ckpt = torch.load(self.checkpoint_path, map_location=device, weights_only=True)
+            self.sb3_mode = ckpt.get("sb3_converted", False)
+
+            if self.sb3_mode:
+                # SB3-converted checkpoint: 181 inputs, [256,256] hidden, physical actions
+                self.num_lidar = ckpt.get("num_lidar", 181)
+                h1 = ckpt.get("hidden1", 256)
+                h2 = ckpt.get("hidden2", 256)
+                self.get_logger().info(
+                    f"SB3-converted checkpoint: {self.num_lidar} inputs, "
+                    f"hidden=[{h1},{h2}], physical actions"
+                )
+            else:
+                # BC-format checkpoint: uses scalers for dimensions
+                scalers = np.load(scalers_path)
+                self.lidar_scale = scalers["lidar_scale"].astype(np.float32)
+                self.lidar_min = scalers["lidar_min"].astype(np.float32)
+                self.action_scale = scalers["action_scale"].astype(np.float32)
+                self.action_min = scalers["action_min"].astype(np.float32)
+                self.num_lidar = len(self.lidar_scale)
+                h1, h2 = 256, 128
+
             self.get_logger().info(f"Resuming from checkpoint: {self.checkpoint_path}")
-            actor = SACActorNet(self.num_lidar)
-            critic1 = SACCriticNet(self.num_lidar)
-            critic2 = SACCriticNet(self.num_lidar)
+            actor = SACActorNet(self.num_lidar, hidden1=h1, hidden2=h2)
+            critic1 = SACCriticNet(self.num_lidar, hidden1=h1, hidden2=h2)
+            critic2 = SACCriticNet(self.num_lidar, hidden1=h1, hidden2=h2)
             self.trainer = SACTrainer(
                 actor, critic1, critic2,
                 state_dim=self.num_lidar, lr_actor=lr, lr_critic=lr, lr_alpha=lr,
@@ -116,6 +130,14 @@ class SACInferenceNode(Node):
             )
             self.trainer.load(self.checkpoint_path)
         else:
+            # No checkpoint — init from BC weights
+            scalers = np.load(scalers_path)
+            self.lidar_scale = scalers["lidar_scale"].astype(np.float32)
+            self.lidar_min = scalers["lidar_min"].astype(np.float32)
+            self.action_scale = scalers["action_scale"].astype(np.float32)
+            self.action_min = scalers["action_min"].astype(np.float32)
+            self.num_lidar = len(self.lidar_scale)
+
             if os.path.isfile(bc_weights_path):
                 self.get_logger().info(f"Initialising actor from BC: {bc_weights_path}")
                 actor = SACActorNet.from_bc(bc_weights_path, self.num_lidar, device=device)
@@ -130,6 +152,8 @@ class SACInferenceNode(Node):
                 gamma=gamma, tau=tau, buffer_size=buffer_size,
                 batch_size=batch_size, device=device,
             )
+
+        self.get_logger().info(f"LiDAR features: {self.num_lidar}")
 
         self.get_logger().info(
             f"SAC ready | training={self.training} deterministic={self.deterministic} "
@@ -196,21 +220,29 @@ class SACInferenceNode(Node):
     def scan_callback(self, msg: LaserScan):
         raw_ranges = np.array(msg.ranges, dtype=np.float32)
 
-        # --- preprocess LiDAR (same as BC) ---
-        downsampled = raw_ranges[::LIDAR_STEP]
-        downsampled = np.where(np.isfinite(downsampled), downsampled, MAX_RANGE)
-        downsampled = np.clip(downsampled, 0.0, MAX_RANGE)
-        if len(downsampled) > self.num_lidar:
-            downsampled = downsampled[: self.num_lidar]
-        elif len(downsampled) < self.num_lidar:
-            downsampled = np.pad(
-                downsampled, (0, self.num_lidar - len(downsampled)),
-                constant_values=MAX_RANGE,
-            )
-        raw_lidar = downsampled.copy()
-
-        # normalise
-        state = downsampled * self.lidar_scale + self.lidar_min
+        if self.sb3_mode:
+            # SB3 preprocessing (matches rl_env.py exactly)
+            ranges = np.where(np.isfinite(raw_ranges), raw_ranges, msg.range_max)
+            ranges = np.clip(ranges, msg.range_min, msg.range_max)
+            ranges = ranges[:1080]
+            indices = np.linspace(0, 1079, self.num_lidar, dtype=int)
+            downsampled = ranges[indices]
+            raw_lidar = downsampled.copy()
+            state = (downsampled / msg.range_max).astype(np.float32)
+        else:
+            # BC preprocessing (MinMaxScaler)
+            downsampled = raw_ranges[::LIDAR_STEP]
+            downsampled = np.where(np.isfinite(downsampled), downsampled, MAX_RANGE)
+            downsampled = np.clip(downsampled, 0.0, MAX_RANGE)
+            if len(downsampled) > self.num_lidar:
+                downsampled = downsampled[: self.num_lidar]
+            elif len(downsampled) < self.num_lidar:
+                downsampled = np.pad(
+                    downsampled, (0, self.num_lidar - len(downsampled)),
+                    constant_values=MAX_RANGE,
+                )
+            raw_lidar = downsampled.copy()
+            state = downsampled * self.lidar_scale + self.lidar_min
 
         # --- collision detection (sim /collision topic OR LiDAR fallback) ---
         n = len(raw_ranges)
@@ -266,9 +298,15 @@ class SACInferenceNode(Node):
                 .numpy()[0]
             )
 
-        # --- denormalise with BC scalers:  X = (X_scaled - min) / scale ---
-        steering = float((action[0] - self.action_min[0]) / self.action_scale[0])
-        speed = float((action[1] - self.action_min[1]) / self.action_scale[1])
+        # --- denormalise action to physical steering + speed ---
+        if self.sb3_mode:
+            # SB3 actions are already physical (steer in ~[-0.4, 0.4], speed in ~[0, 4])
+            steering = float(action[0])
+            speed = float(np.clip(action[1], 0.0, self.max_speed))
+        else:
+            # BC scalers: X = (X_scaled - min) / scale
+            steering = float((action[0] - self.action_min[0]) / self.action_scale[0])
+            speed = float((action[1] - self.action_min[1]) / self.action_scale[1])
         speed = max(self.min_speed, min(speed, self.max_speed))
 
         # --- publish ---
