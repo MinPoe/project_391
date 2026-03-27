@@ -26,8 +26,8 @@ def compute_reward(
 
     # 2. Wall proximity -- penalise being close to obstacles
     min_range = float(np.min(lidar_ranges))
-    if min_range < 0.5:
-        reward -= (0.5 - min_range) * 5.0
+    if min_range < 0.2:
+        reward -= (0.2 - min_range) * 5.0
 
     # 3. Track centering -- balanced left / right distances
     n = len(lidar_ranges)
