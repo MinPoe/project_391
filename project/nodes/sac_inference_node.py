@@ -64,6 +64,9 @@ class SACInferenceNode(Node):
         self.declare_parameter("update_every", 4)
         self.declare_parameter("warmup_steps", 0)
         self.declare_parameter("save_every", 5000)
+        # Collision detection (replaces safety_node in sim)
+        self.declare_parameter("collision_threshold", 0.3)
+        self.declare_parameter("crash_cooldown_steps", 50)
 
         # ---- read parameters ----
         bc_weights_path = self._str("bc_weights_path")
@@ -83,6 +86,8 @@ class SACInferenceNode(Node):
         self.update_every = self._int("update_every")
         self.warmup_steps = self._int("warmup_steps")
         self.save_every = self._int("save_every")
+        self.collision_threshold = self._dbl("collision_threshold")
+        self.crash_cooldown_steps = self._int("crash_cooldown_steps")
 
         # ---- load scalers (same ones BC uses) ----
         scalers = np.load(scalers_path)
@@ -140,6 +145,7 @@ class SACInferenceNode(Node):
         self.episode_reward = 0.0
         self.episode_steps = 0
         self.episode_count = 0
+        self.steps_since_crash = self.crash_cooldown_steps  # allow driving immediately
 
         # ---- training log (CSV) ----
         if self.training:
@@ -186,9 +192,6 @@ class SACInferenceNode(Node):
 
         raw_ranges = np.array(msg.ranges, dtype=np.float32)
 
-        # Safety is handled entirely by the safety_node via /kys.
-        # No internal emergency-stop check here to avoid deadlocks.
-
         # --- preprocess LiDAR (same as BC) ---
         downsampled = raw_ranges[::LIDAR_STEP]
         downsampled = np.where(np.isfinite(downsampled), downsampled, MAX_RANGE)
@@ -204,6 +207,37 @@ class SACInferenceNode(Node):
 
         # normalise
         state = downsampled * self.lidar_scale + self.lidar_min
+
+        # --- internal collision detection (replaces safety_node in sim) ---
+        n = len(raw_ranges)
+        forward = raw_ranges[n // 4 : 3 * n // 4]
+        forward = forward[np.isfinite(forward)]
+        crashed = (
+            len(forward) > 0
+            and np.min(forward) < self.collision_threshold
+            and self.steps_since_crash >= self.crash_cooldown_steps
+        )
+
+        if crashed and self.training:
+            self._end_episode(done=True)
+            self.steps_since_crash = 0
+            self.episode_count += 1
+            self.get_logger().info(
+                f"CRASH (min_fwd={np.min(forward):.2f}m) | "
+                f"Episode {self.episode_count} | "
+                f"reward={self.episode_reward:.2f} "
+                f"steps={self.episode_steps} "
+                f"total_steps={self.step_count} "
+                f"buffer={len(self.trainer.buffer)}"
+            )
+            if self.training:
+                self._log_episode()
+            self.episode_reward = 0.0
+            self.episode_steps = 0
+            self.prev_state = None
+            self.prev_action = None
+
+        self.steps_since_crash += 1
 
         # --- store previous transition ---
         if self.training and self.prev_state is not None:
