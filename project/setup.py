@@ -15,6 +15,12 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob(os.path.join('launch', '*.py'))),
         (os.path.join('share', package_name, 'config'), glob(os.path.join('config', '*.yaml'))),
+        # Model weights and scalers (needed at runtime by inference nodes)
+        (os.path.join('share', package_name, 'bc'), glob(os.path.join('bc', '*.pth'))),
+        (os.path.join('share', package_name, 'processed', 'processed_simulator'),
+            glob(os.path.join('processed', 'processed_simulator', '*.npz'))),
+        (os.path.join('share', package_name, 'processed', 'processed_physical'),
+            glob(os.path.join('processed', 'processed_physical', '*.npz'))),
     ],
     install_requires=['setuptools'],
     zip_safe=True,

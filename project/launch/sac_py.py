@@ -4,11 +4,10 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
+from ament_index_python.packages import get_package_share_directory
 
-# Resolve model/data paths relative to the source tree so they work
-# regardless of the directory you run `ros2 launch` from.
-_LAUNCH_DIR = os.path.dirname(os.path.abspath(__file__))
-_PKG_SRC = os.path.dirname(_LAUNCH_DIR)          # .../project/
+# Locate installed package data so paths work regardless of CWD.
+_SHARE = get_package_share_directory('project')
 
 
 def generate_launch_description():
@@ -28,10 +27,10 @@ def generate_launch_description():
             executable='sac_inference_node',
             output='screen',
             parameters=[{
-                'bc_weights_path': os.path.join(_PKG_SRC, 'bc', 'bc_model_sim.pth'),
-                'scalers_path': os.path.join(_PKG_SRC, 'processed', 'processed_simulator', 'scalers.npz'),
-                'checkpoint_path': os.path.join(_PKG_SRC, 'sac', 'sac_checkpoint.pth'),
-                'log_path': os.path.join(_PKG_SRC, 'sac', 'training_log.csv'),
+                'bc_weights_path': os.path.join(_SHARE, 'bc', 'bc_model_sim.pth'),
+                'scalers_path': os.path.join(_SHARE, 'processed', 'processed_simulator', 'scalers.npz'),
+                'checkpoint_path': os.path.join(_SHARE, 'sac', 'sac_checkpoint.pth'),
+                'log_path': os.path.join(_SHARE, 'sac', 'training_log.csv'),
                 'max_speed': 2.0,
                 'min_speed': 0.5,
                 'max_steering': 0.4189,
