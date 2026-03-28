@@ -11,9 +11,9 @@ from sklearn.preprocessing import MinMaxScaler
 
 # config
 BAG_PATHS = [
-    "data/gap_following_data",
-    "data/gap_following_data_v2",
-    "data/session_03",
+    ("data/gap_following_data", 24),
+    ("data/gap_following_data_v2", 24),
+    ("data/gap_following_data_v3", 148),
 ]
 OUTPUT_DIR = "processed"
 LAP_DURATION_SEC = 148  # approximate lap time in seconds
@@ -36,15 +36,16 @@ def bag_to_df(bag_path):
         os.remove(tmp_path)
     return df
 
-def label_laps(df, session_id):
+def label_laps(df, session_id, lap_duration_sec):
     df = df.sort_values("timestamp").reset_index(drop=True)
-    lap_duration_ns = LAP_DURATION_SEC * 1_000_000_000
+    lap_duration_ns = lap_duration_sec * 1_000_000_000
     start_ts = df["timestamp"].iloc[0]
     df = df.copy()
     df["lap_id"] = ((df["timestamp"] - start_ts) // lap_duration_ns).astype(int)
     df["session"] = session_id
-    # drop last partial lap
-    df = df[df["lap_id"] < df["lap_id"].max()].reset_index(drop=True)
+    # drop last partial lap (only if there are multiple laps)
+    if df["lap_id"].max() > 0:
+        df = df[df["lap_id"] < df["lap_id"].max()].reset_index(drop=True)
     return df
 
 def clean(df):
@@ -90,11 +91,11 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     frames = []
-    for i, bag_path in enumerate(BAG_PATHS):
+    for i, (bag_path, lap_sec) in enumerate(BAG_PATHS):
         if not os.path.exists(bag_path):
             continue
         df = bag_to_df(bag_path)
-        df = label_laps(df, session_id=i)
+        df = label_laps(df, session_id=i, lap_duration_sec=lap_sec)
         df = clean(df)
         df = downsample_lidar(df)
         frames.append(df)
