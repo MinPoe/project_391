@@ -166,6 +166,7 @@ class SACTrainer:
         c1_loss = F.mse_loss(q1, target)
         self.critic1_optim.zero_grad()
         c1_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic1.parameters(), 1.0)
         self.critic1_optim.step()
 
         # ---- update critic 2 ----
@@ -173,6 +174,7 @@ class SACTrainer:
         c2_loss = F.mse_loss(q2, target)
         self.critic2_optim.zero_grad()
         c2_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.critic2.parameters(), 1.0)
         self.critic2_optim.step()
 
         # ---- update actor ----
@@ -184,6 +186,7 @@ class SACTrainer:
 
         self.actor_optim.zero_grad()
         actor_loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.actor.parameters(), 1.0)
         self.actor_optim.step()
 
         # ---- update alpha (entropy temperature) ----

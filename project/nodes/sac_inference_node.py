@@ -60,8 +60,8 @@ class SACInferenceNode(Node):
         self.declare_parameter("tau", 0.005)
         self.declare_parameter("buffer_size", 100000)
         self.declare_parameter("batch_size", 256)
-        self.declare_parameter("update_every", 4)
-        self.declare_parameter("warmup_steps", 0)
+        self.declare_parameter("update_every", 10)
+        self.declare_parameter("warmup_steps", 2000)
         self.declare_parameter("save_every", 5000)
         self.declare_parameter("collision_threshold", 0.3)
         self.declare_parameter("reset_x", 0.0)
@@ -140,6 +140,7 @@ class SACInferenceNode(Node):
         self.prev_action = None
         self.prev_raw_lidar = None
         self.prev_steering = 0.0
+        self.prev_prev_steering = 0.0
         self.current_speed = 0.0
         self.step_count = 0
         self.episode_reward = 0.0
@@ -231,6 +232,7 @@ class SACInferenceNode(Node):
             reward = compute_reward(
                 self.prev_raw_lidar, self.current_speed,
                 self.prev_steering, done=False,
+                prev_steering=self.prev_prev_steering,
             )
             self.trainer.store(
                 self.prev_state, self.prev_action, reward, state, False
@@ -266,6 +268,7 @@ class SACInferenceNode(Node):
         self.prev_state = state
         self.prev_action = action
         self.prev_raw_lidar = raw_lidar
+        self.prev_prev_steering = self.prev_steering
         self.prev_steering = steering
         self.step_count += 1
 
@@ -318,6 +321,7 @@ class SACInferenceNode(Node):
         if self.training and self.prev_state is not None:
             reward = compute_reward(
                 self.prev_raw_lidar, 0.0, self.prev_steering, done=True,
+                prev_steering=self.prev_prev_steering,
             )
             self.trainer.store(
                 self.prev_state, self.prev_action, reward,
