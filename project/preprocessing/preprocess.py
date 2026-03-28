@@ -20,6 +20,7 @@ LAP_DURATION_SEC = 148  # approximate lap time in seconds
 LIDAR_STEP = 6          # keep every nth ray (1081 → 181 rays)
 MAX_RANGE = 10.0        # cap lidar readings at this distance in meters
 MIN_SPEED = 0.05        # drop rows where car is stationary
+MAX_STEER = 0.5         # clip steering to ±0.5 rad (car max is ~0.42)
 
 def bag_to_df(bag_path):
     # convert bag to a temporary csv then load it into a dataframe
@@ -56,6 +57,8 @@ def clean(df):
         .clip(0, MAX_RANGE)
         .fillna(MAX_RANGE)
     )
+    # clip steering outliers (raw data can have ±π from bad readings)
+    df["steering_angle"] = df["steering_angle"].clip(-MAX_STEER, MAX_STEER)
     # odom_vx is negative when moving forward on this vehicle
     df = df[df["odom_vx"].abs() > MIN_SPEED].reset_index(drop=True)
     return df
@@ -106,6 +109,19 @@ def main():
     combined.to_csv(f"{OUTPUT_DIR}/data.csv", index=False)
     joblib.dump(scaler_lidar, f"{OUTPUT_DIR}/scaler_lidar.pkl")
     joblib.dump(scaler_action, f"{OUTPUT_DIR}/scaler_action.pkl")
+
+    # Save scalers as .npz for the ROS2 inference nodes
+    np.savez(
+        f"{OUTPUT_DIR}/scalers.npz",
+        lidar_scale=scaler_lidar.scale_.astype(np.float32),
+        lidar_min=scaler_lidar.min_.astype(np.float32),
+        action_scale=scaler_action.scale_.astype(np.float32),
+        action_min=scaler_action.min_.astype(np.float32),
+    )
+    print(f"Scalers saved to {OUTPUT_DIR}/scalers.npz")
+    print(f"  Steering range: [{-MAX_STEER}, {MAX_STEER}] rad")
+    print(f"  action_scale: {scaler_action.scale_}")
+    print(f"  action_min:   {scaler_action.min_}")
 
 if __name__ == "__main__":
     main()
