@@ -55,7 +55,8 @@ class SACInferenceNode(Node):
         self.declare_parameter("min_speed", 0.5)
         self.declare_parameter("training", True)
         self.declare_parameter("deterministic", False)
-        self.declare_parameter("lr", 3e-4)
+        self.declare_parameter("lr_actor", 1e-4)
+        self.declare_parameter("lr_critic", 3e-4)
         self.declare_parameter("gamma", 0.99)
         self.declare_parameter("tau", 0.005)
         self.declare_parameter("buffer_size", 100000)
@@ -77,7 +78,8 @@ class SACInferenceNode(Node):
         self.min_speed = self._dbl("min_speed")
         self.training = self._bool("training")
         self.deterministic = self._bool("deterministic")
-        lr = self._dbl("lr")
+        lr_actor = self._dbl("lr_actor")
+        lr_critic = self._dbl("lr_critic")
         gamma = self._dbl("gamma")
         tau = self._dbl("tau")
         buffer_size = self._int("buffer_size")
@@ -109,7 +111,7 @@ class SACInferenceNode(Node):
             critic2 = SACCriticNet(self.num_lidar)
             self.trainer = SACTrainer(
                 actor, critic1, critic2,
-                state_dim=self.num_lidar, lr_actor=lr, lr_critic=lr, lr_alpha=lr,
+                state_dim=self.num_lidar, lr_actor=lr_actor, lr_critic=lr_critic, lr_alpha=lr_critic,
                 gamma=gamma, tau=tau, buffer_size=buffer_size,
                 batch_size=batch_size, device=device,
             )
@@ -125,7 +127,7 @@ class SACInferenceNode(Node):
             critic2 = SACCriticNet(self.num_lidar)
             self.trainer = SACTrainer(
                 actor, critic1, critic2,
-                state_dim=self.num_lidar, lr_actor=lr, lr_critic=lr, lr_alpha=lr,
+                state_dim=self.num_lidar, lr_actor=lr_actor, lr_critic=lr_critic, lr_alpha=lr_critic,
                 gamma=gamma, tau=tau, buffer_size=buffer_size,
                 batch_size=batch_size, device=device,
             )
@@ -146,6 +148,7 @@ class SACInferenceNode(Node):
         self.episode_reward = 0.0
         self.episode_steps = 0
         self.episode_count = 0
+        self.best_episode_reward = -float('inf')
         self.collision_detected = False
         self.episode_start_time = time.time()
 
@@ -220,6 +223,11 @@ class SACInferenceNode(Node):
                 f"total={self.step_count} "
                 f"buffer={len(self.trainer.buffer)}"
             )
+            if self.episode_reward > self.best_episode_reward:
+                self.best_episode_reward = self.episode_reward
+                best_path = self.checkpoint_path.replace('.pth', '_best.pth')
+                self.trainer.save(best_path)
+                self.get_logger().info(f"NEW BEST saved ({self.episode_reward:.2f})")
             self.episode_reward = 0.0
             self.episode_steps = 0
             self.prev_state = None
