@@ -104,6 +104,9 @@ def main():
         return
 
     combined = pd.concat(frames, ignore_index=True)
+    # Fill NaN from bags with different ray counts
+    lidar_cols = [c for c in combined.columns if c.startswith("lidar_")]
+    combined[lidar_cols] = combined[lidar_cols].fillna(MAX_RANGE)
     combined = augment(combined)
     combined, scaler_lidar, scaler_action = normalize(combined)
 
