@@ -24,10 +24,10 @@ def compute_reward(
     reward = 0.0
 
     # 1. Survival bonus -- reward staying alive
-    reward += 0.5
+    reward += 0.1
 
     # 2. Forward progress -- encourage speed
-    reward += speed * 0.5
+    reward += speed * 0.1
 
     # 3. Wall proximity -- penalise being close to obstacles
     min_range = float(np.min(lidar_ranges))
