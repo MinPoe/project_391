@@ -148,7 +148,7 @@ class SACInferenceNode(Node):
         self.episode_reward = 0.0
         self.episode_steps = 0
         self.episode_count = 0
-        self.best_episode_reward = -float('inf')
+        self.best_episode_steps = 0
         self.collision_detected = False
         self.episode_start_time = time.time()
 
@@ -223,11 +223,13 @@ class SACInferenceNode(Node):
                 f"total={self.step_count} "
                 f"buffer={len(self.trainer.buffer)}"
             )
-            if self.episode_reward > self.best_episode_reward:
-                self.best_episode_reward = self.episode_reward
+            if self.episode_steps > self.best_episode_steps:
+                self.best_episode_steps = self.episode_steps
                 best_path = self.checkpoint_path.replace('.pth', '_best.pth')
                 self.trainer.save(best_path)
-                self.get_logger().info(f"NEW BEST saved ({self.episode_reward:.2f})")
+                self.get_logger().info(
+                    f"NEW BEST saved (steps={self.episode_steps}, reward={self.episode_reward:.2f})"
+                )
             self.episode_reward = 0.0
             self.episode_steps = 0
             self.prev_state = None
