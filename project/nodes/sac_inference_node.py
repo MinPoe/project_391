@@ -148,7 +148,14 @@ class SACInferenceNode(Node):
         self.episode_reward = 0.0
         self.episode_steps = 0
         self.episode_count = 0
-        self.best_episode_steps = 0
+        best_path = self.checkpoint_path.replace('.pth', '_best.pth')
+        best_meta = best_path + '.steps'
+        if os.path.isfile(best_path) and os.path.isfile(best_meta):
+            with open(best_meta, 'r') as f:
+                self.best_episode_steps = int(f.read().strip())
+            self.get_logger().info(f"Existing best: {self.best_episode_steps} steps — must beat to overwrite")
+        else:
+            self.best_episode_steps = 0
         self.collision_detected = False
         self.episode_start_time = time.time()
 
@@ -227,6 +234,8 @@ class SACInferenceNode(Node):
                 self.best_episode_steps = self.episode_steps
                 best_path = self.checkpoint_path.replace('.pth', '_best.pth')
                 self.trainer.save(best_path)
+                with open(best_path + '.steps', 'w') as f:
+                    f.write(str(self.episode_steps))
                 self.get_logger().info(
                     f"NEW BEST saved (steps={self.episode_steps}, reward={self.episode_reward:.2f})"
                 )
