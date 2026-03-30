@@ -8,6 +8,8 @@ import os
 
 from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch.substitutions import PathJoinSubstitution
+from launch_ros.substitutions import FindPackageShare
 
 _HOME = os.path.expanduser('~')
 _PROJECT = os.path.join(_HOME, 'sim_ws', 'src', 'Project_C10', 'project')
@@ -15,6 +17,16 @@ _PROJECT = os.path.join(_HOME, 'sim_ws', 'src', 'Project_C10', 'project')
 
 def generate_launch_description():
     return LaunchDescription([
+        # safety node
+        Node(
+            package='project',
+            executable='safety_node',
+            output='screen',
+            parameters=[PathJoinSubstitution([
+                FindPackageShare('project'), 'config', 'safety_params.yaml'])
+            ],
+        ),
+        # SAC training node
         Node(
             package='project',
             executable='sac_train_node',
