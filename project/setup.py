@@ -17,6 +17,9 @@ setup(
         (os.path.join('share', package_name, 'config'), glob(os.path.join('config', '*.yaml'))),
         # Model weights and scalers (needed at runtime by inference nodes)
         (os.path.join('share', package_name, 'bc'), glob(os.path.join('bc', '*.pth'))),
+        (os.path.join('share', package_name, 'sac'), glob(os.path.join('sac', '*.pth'))),
+        (os.path.join('share', package_name, 'processed'),
+            glob(os.path.join('processed', '*.npz'))),
         (os.path.join('share', package_name, 'processed', 'processed_simulator'),
             glob(os.path.join('processed', 'processed_simulator', '*.npz'))),
         (os.path.join('share', package_name, 'processed', 'processed_physical'),
@@ -33,7 +36,8 @@ setup(
         'console_scripts': [
             'safety_node = project.safety_node:main',
             'bc_inference_node = project.bc_inference_node:main',
-            'sac_inference_node = project.sac_inference_node:main'
+            'sac_train_node = project.sac_train_node:main',
+            'sac_demo_node = project.sac_demo_node:main',
         ],
     },
 )

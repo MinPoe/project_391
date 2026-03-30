@@ -74,6 +74,21 @@ class SafetyNode(Node):
         self.winding_down = False
         signal.signal(signal.SIGINT, self._sigint_handler)
 
+        # for printing less often to free up CPU
+        self.last_logged_state = None
+        self.last_log_time_ns = 0
+
+    def log_state(self, state: str, min_distance: float, ttc: float) -> None:
+        now_ns = self.get_clock().now().nanoseconds
+
+        # log immediately if state changed, otherwise at most once per second
+        if state != self.last_logged_state or (now_ns - self.last_log_time_ns) >= 1_000_000_000:
+            self.get_logger().info(
+                f"{state} - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s"
+            )
+            self.last_logged_state = state
+            self.last_log_time_ns = now_ns
+            
     def lidar_callback(self, msg: LaserScan) -> None:
         """
         LiDAR callback for collision detection.
@@ -121,25 +136,26 @@ class SafetyNode(Node):
             self.kys_pub.publish(kys_msg)
 
             self.drive_pub.publish(drive_msg)
-            self.get_logger().info(f"FB - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s")
+            self.log_state("FB", min_distance, ttc)
 
         # PB2
         elif ttc < self.ttc_pb2:
             drive_msg.drive.speed = 2.0
 
-            self.get_logger().info(f"PARTIAL BRAKE 2 - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s")
+            self.log_state("PARTIAL BRAKE 2", min_distance, ttc)
 
         # PB1 
         elif ttc < self.ttc_pb1:
             drive_msg.drive.speed = 2.9
 
-            self.get_logger().info(f"PARTIAL BRAKE 1 - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s")
+            self.log_state("PARTIAL BRAKE 1", min_distance, ttc)
        
         # NONE
         else:
             drive_msg.drive.speed = 4.0
 
-            self.get_logger().info(f"NONE - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s")
+            # self.get_logger().info(f"NONE - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s")
+            self.log_state("NONE", min_distance, ttc)
             
         if self.winding_down:
             drive_msg.drive.speed = min(drive_msg.drive.speed, 0.0)
