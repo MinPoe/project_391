@@ -37,7 +37,7 @@ def generate_launch_description():
                 'checkpoint_path': os.path.join(_PROJECT, 'sac', 'sac_checkpoint.pth'),
                 'log_path': os.path.join(_PROJECT, 'sac', 'training_log.csv'),
                 'max_speed': 2.0,
-                'min_speed': 0.5,
+                'min_speed': 0.7,
                 'deterministic': False,
             }],
         ),
