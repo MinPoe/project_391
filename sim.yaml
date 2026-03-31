@@ -60,42 +60,32 @@ bridge:
 
     # teleop
     kb_teleop: True
-cjim02@ubuntu:~/sim_ws$ ros2 launch f1tenth_gym_ros gym_bridge_launch.py
-[INFO] [launch]: All log files can be found below /home/cjim02/.ros/log/2026-03-30-18-09-50-732374-ubuntu-21140
-[INFO] [launch]: Default logging verbosity is set to INFO
-Task exception was never retrieved
-future: <Task finished name='Task-2' coro=<LaunchService._process_one_event() done, defined at /opt/ros/foxy/lib/python3.8/site-packages/launch/launch_service.py:226> exception=InvalidLaunchFileError('py')>
-Traceback (most recent call last):
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/launch_description_sources/any_launch_file_utilities.py", line 53, in get_launch_description_from_any_launch_file
-    return loader(launch_file_path)
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/launch_description_sources/python_launch_file_utilities.py", line 68, in get_launch_description_from_python_launch_file
-    return getattr(launch_file_module, 'generate_launch_description')()
-  File "/home/cjim02/sim_ws/install/f1tenth_gym_ros/share/f1tenth_gym_ros/launch/gym_bridge_launch.py", line 38, in generate_launch_description
-    has_opp = config_dict['bridge']['ros__parameters']['num_agent'] > 1
-KeyError: 'num_agent'
+c - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[INFO] [map_server-4]: process has finished cleanly [pid 21386]
+[INFO] [lifecycle_manager-3]: process has finished cleanly [pid 21384]
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
+[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
 
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/launch_service.py", line 228, in _process_one_event
-    await self.__process_event(next_event)
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/launch_service.py", line 248, in __process_event
-    visit_all_entities_and_collect_futures(entity, self.__context))
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/utilities/visit_all_entities_and_collect_futures_impl.py", line 45, in visit_all_entities_and_collect_futures
-    futures_to_return += visit_all_entities_and_collect_futures(sub_entity, context)
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/utilities/visit_all_entities_and_collect_futures_impl.py", line 45, in visit_all_entities_and_collect_futures
-    futures_to_return += visit_all_entities_and_collect_futures(sub_entity, context)
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/utilities/visit_all_entities_and_collect_futures_impl.py", line 38, in visit_all_entities_and_collect_futures
-    sub_entities = entity.visit(context)
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/action.py", line 108, in visit
-    return self.execute(context)
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/actions/include_launch_description.py", line 130, in execute
-    launch_description = self.__launch_description_source.get_launch_description(context)
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/launch_description_source.py", line 84, in get_launch_description
-    self._get_launch_description(self.__expanded_location)
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/launch_description_sources/any_launch_description_source.py", line 53, in _get_launch_description
-    return get_launch_description_from_any_launch_file(location)
-  File "/opt/ros/foxy/lib/python3.8/site-packages/launch/launch_description_sources/any_launch_file_utilities.py", line 56, in get_launch_description_from_any_launch_file
-    raise InvalidLaunchFileError(extension, likely_errors=exceptions)
-launch.invalid_launch_file_error.InvalidLaunchFileError: Caught exception when trying to load file of format [py]: 'num_agent'
-cjim02@ubuntu:~/sim_ws$ 
