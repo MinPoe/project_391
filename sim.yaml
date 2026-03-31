@@ -60,8 +60,8 @@ bridge:
 
     # teleop
     kb_teleop: True
-jim02@ubuntu:~/sim_ws$ ros2 launch f1tenth_gym_ros gym_bridge_launch.py
-[INFO] [launch]: All log files can be found below /home/cjim02/.ros/log/2026-03-30-18-04-52-485900-ubuntu-20701
+cjim02@ubuntu:~/sim_ws$ ros2 launch f1tenth_gym_ros gym_bridge_launch.py
+[INFO] [launch]: All log files can be found below /home/cjim02/.ros/log/2026-03-30-18-09-50-732374-ubuntu-21140
 [INFO] [launch]: Default logging verbosity is set to INFO
 Task exception was never retrieved
 future: <Task finished name='Task-2' coro=<LaunchService._process_one_event() done, defined at /opt/ros/foxy/lib/python3.8/site-packages/launch/launch_service.py:226> exception=InvalidLaunchFileError('py')>
@@ -98,5 +98,4 @@ Traceback (most recent call last):
   File "/opt/ros/foxy/lib/python3.8/site-packages/launch/launch_description_sources/any_launch_file_utilities.py", line 56, in get_launch_description_from_any_launch_file
     raise InvalidLaunchFileError(extension, likely_errors=exceptions)
 launch.invalid_launch_file_error.InvalidLaunchFileError: Caught exception when trying to load file of format [py]: 'num_agent'
-cjim02@ubuntu:~/sim_ws$ ^C
 cjim02@ubuntu:~/sim_ws$ 
