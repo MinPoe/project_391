@@ -60,3 +60,12 @@ bridge:
 
     # teleop
     kb_teleop: True
+cjim02@ubuntu:~/sim_ws$ ros2 run f1tenth_gym_ros gym_bridge 2>&1
+Traceback (most recent call last):
+  File "/home/cjim02/sim_ws/install/f1tenth_gym_ros/lib/f1tenth_gym_ros/gym_bridge", line 11, in <module>
+    load_entry_point('f1tenth-gym-ros==0.0.0', 'console_scripts', 'gym_bridge')()
+  File "/home/cjim02/sim_ws/install/f1tenth_gym_ros/lib/python3.8/site-packages/f1tenth_gym_ros/gym_bridge.py", line 412, in main
+    gym_bridge = GymBridge()
+  File "/home/cjim02/sim_ws/install/f1tenth_gym_ros/lib/python3.8/site-packages/f1tenth_gym_ros/gym_bridge.py", line 71, in __init__
+    if num_agents < 1 or num_agents > 2:
+TypeError: '<' not supported between instances of 'NoneType' and 'int'
