@@ -60,32 +60,73 @@ bridge:
 
     # teleop
     kb_teleop: True
-c - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[INFO] [map_server-4]: process has finished cleanly [pid 21386]
-[INFO] [lifecycle_manager-3]: process has finished cleanly [pid 21384]
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
-[rviz2-1] Warning: Invalid frame ID "map" passed to canTransform argument target_frame - frame does not exist
-[rviz2-1]          at line 133 in /tmp/binarydeb/ros-foxy-tf2-0.13.14/src/buffer_core.cpp
+u:~/sim_ws$ ros2 run f1tenth_gym_ros gym_bridge --ros-args --params-file ~/sim_ws/src/f1tenth_gym_ros/config/sim.yaml -r __node:=bridge
+/home/cjim02/f1tenth_gym/gym/f110_gym/envs/base_classes.py:95: UserWarning: Chosen integrator is RK4. This is different from previous versions of the gym.
+  warnings.warn(f"Chosen integrator is RK4. This is different from previous versions of the gym.")
+Traceback (most recent call last):
+  File "/home/cjim02/sim_ws/install/f1tenth_gym_ros/lib/f1tenth_gym_ros/gym_bridge", line 11, in <module>
+    load_entry_point('f1tenth-gym-ros==0.0.0', 'console_scripts', 'gym_bridge')()
+  File "/home/cjim02/sim_ws/install/f1tenth_gym_ros/lib/python3.8/site-packages/f1tenth_gym_ros/gym_bridge.py", line 412, in main
+    gym_bridge = GymBridge()
+  File "/home/cjim02/sim_ws/install/f1tenth_gym_ros/lib/python3.8/site-packages/f1tenth_gym_ros/gym_bridge.py", line 126, in __init__
+    self.obs, _ , self.done, _ = self.env.reset(np.array([[sx, sy, stheta]]))
+  File "/home/cjim02/f1tenth_gym/gym/f110_gym/envs/f110_env.py", line 338, in reset
+    obs, reward, done, info = self.step(action)
+  File "/home/cjim02/f1tenth_gym/gym/f110_gym/envs/f110_env.py", line 278, in step
+    obs = self.sim.step(action)
+  File "/home/cjim02/f1tenth_gym/gym/f110_gym/envs/base_classes.py", line 570, in step
+    current_scan = agent.update_pose(control_inputs[i, 0], control_inputs[i, 1])
+  File "/home/cjim02/f1tenth_gym/gym/f110_gym/envs/base_classes.py", line 410, in update_pose
+    current_scan = RaceCar.scan_simulator.scan(scan_pose, self.scan_rng)
+  File "/home/cjim02/f1tenth_gym/gym/f110_gym/envs/laser_models.py", line 448, in scan
+    scan = get_scan(pose, self.theta_dis, self.fov, self.num_beams, self.theta_index_increment, self.sines, self.cosines, self.eps, self.orig_x, self.orig_y, self.orig_c, self.orig_s, self.map_height, self.map_width, self.map_resolution, self.dt, self.max_range)
+  File "/home/cjim02/.local/lib/python3.8/site-packages/numba/core/dispatcher.py", line 468, in _compile_for_args
+    error_rewrite(e, 'typing')
+  File "/home/cjim02/.local/lib/python3.8/site-packages/numba/core/dispatcher.py", line 409, in error_rewrite
+    raise e.with_traceback(None)
+numba.core.errors.TypingError: Failed in nopython mode pipeline (step: nopython frontend)
+Failed in nopython mode pipeline (step: nopython frontend)
+No implementation of function Function(<built-in function iadd>) found for signature:
+ 
+ >>> iadd(float64, array(float64, 1d, C))
+ 
+There are 18 candidate implementations:
+   - Of which 16 did not match due to:
+   Overload of function 'iadd': File: <numerous>: Line N/A.
+     With argument(s): '(float64, array(float64, 1d, C))':
+    No match.
+   - Of which 2 did not match due to:
+   Operator Overload in function 'iadd': File: unknown: Line unknown.
+     With argument(s): '(float64, array(float64, 1d, C))':
+    No match for registered cases:
+     * (int64, int64) -> int64
+     * (int64, uint64) -> int64
+     * (uint64, int64) -> int64
+     * (uint64, uint64) -> uint64
+     * (float32, float32) -> float32
+     * (float64, float64) -> float64
+     * (complex64, complex64) -> complex64
+     * (complex128, complex128) -> complex128
 
+During: typing of intrinsic-call at /home/cjim02/f1tenth_gym/gym/f110_gym/envs/laser_models.py (135)
+
+File "../f1tenth_gym/gym/f110_gym/envs/laser_models.py", line 135:
+def trace_ray(x, y, theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range):
+    <source elided>
+        # move in the direction of the ray by dist_to_nearest
+        x += dist_to_nearest * c
+        ^
+
+During: resolving callee type: type(CPUDispatcher(<function trace_ray at 0x7f7f83b9e700>))
+During: typing of call at /home/cjim02/f1tenth_gym/gym/f110_gym/envs/laser_models.py (177)
+
+During: resolving callee type: type(CPUDispatcher(<function trace_ray at 0x7f7f83b9e700>))
+During: typing of call at /home/cjim02/f1tenth_gym/gym/f110_gym/envs/laser_models.py (177)
+
+
+File "../f1tenth_gym/gym/f110_gym/envs/laser_models.py", line 177:
+def get_scan(pose, theta_dis, fov, num_beams, theta_index_increment, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range):
+    <source elided>
+        # trace the current beam
+        scan[i] = trace_ray(pose[0], pose[1], theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range)
+        ^
