@@ -55,10 +55,10 @@ def trace_ray(x, y, theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, or
         x += dist_to_nearest * c
         ^
 
-During: resolving callee type: type(CPUDispatcher(<function trace_ray at 0x7f984ecae700>))
+During: resolving callee type: type(CPUDispatcher(<function trace_ray at 0x7f15381f8700>))
 During: typing of call at /home/cjim02/f1tenth_gym/gym/f110_gym/envs/laser_models.py (177)
 
-During: resolving callee type: type(CPUDispatcher(<function trace_ray at 0x7f984ecae700>))
+During: resolving callee type: type(CPUDispatcher(<function trace_ray at 0x7f15381f8700>))
 During: typing of call at /home/cjim02/f1tenth_gym/gym/f110_gym/envs/laser_models.py (177)
 
 
@@ -66,7 +66,5 @@ File "../f1tenth_gym/gym/f110_gym/envs/laser_models.py", line 177:
 def get_scan(pose, theta_dis, fov, num_beams, theta_index_increment, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range):
     <source elided>
         # trace the current beam
-        scan[i] = trace_ray(pose[0], pose[1], theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range)
+        scan[i] = trace_ray(float(pose[0]), float(pose[1]), theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range)
         ^
-
-cjim02@ubuntu:~/sim_ws$
