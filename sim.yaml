@@ -1,66 +1,4 @@
-# MIT License
-
-# Copyright (c) 2020 Hongrui Zheng
-
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
-bridge:
-  ros__parameters:
-    # topics and namespaces
-    ego_namespace: 'ego_racecar'
-    ego_scan_topic: 'scan'
-    ego_odom_topic: 'odom'
-    ego_opp_odom_topic: 'opp_odom'
-    ego_drive_topic: 'drive'
-    opp_namespace: 'opp_racecar'
-    opp_scan_topic: 'opp_scan'
-    opp_odom_topic: 'odom'
-    opp_ego_odom_topic: 'opp_odom'
-    opp_drive_topic: 'opp_drive'
-
-    # transform related
-    scan_distance_to_base_link: 0.275
-    
-    # laserscan parameters
-    scan_fov: 4.7
-    scan_beams: 1080
-
-    # map parameters
-    map_path: '/home/cjim02/sim_ws/src/f1tenth_gym_ros/maps/indy_map'
-    map_img_ext: '.png'
-
-    # opponent parameters
-    num_agent: 1
-
-    # ego starting pose on map
-    sx: 0.0
-    sy: 0.0
-    stheta: 0.0
-
-    # opp starting pose on map
-    sx1: 2.0
-    sy1: 0.5
-    stheta1: 0.0
-
-    # teleop
-    kb_teleop: True
-u:~/sim_ws$ ros2 run f1tenth_gym_ros gym_bridge --ros-args --params-file ~/sim_ws/src/f1tenth_gym_ros/config/sim.yaml -r __node:=bridge
+cjim02@ubuntu:~/sim_ws$ ros2 run f1tenth_gym_ros gym_bridge --ros-args --params-file ~/sim_ws/src/f1tenth_gym_ros/config/sim.yaml -r __node:=bridge
 /home/cjim02/f1tenth_gym/gym/f110_gym/envs/base_classes.py:95: UserWarning: Chosen integrator is RK4. This is different from previous versions of the gym.
   warnings.warn(f"Chosen integrator is RK4. This is different from previous versions of the gym.")
 Traceback (most recent call last):
@@ -117,10 +55,10 @@ def trace_ray(x, y, theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, or
         x += dist_to_nearest * c
         ^
 
-During: resolving callee type: type(CPUDispatcher(<function trace_ray at 0x7f7f83b9e700>))
+During: resolving callee type: type(CPUDispatcher(<function trace_ray at 0x7f984ecae700>))
 During: typing of call at /home/cjim02/f1tenth_gym/gym/f110_gym/envs/laser_models.py (177)
 
-During: resolving callee type: type(CPUDispatcher(<function trace_ray at 0x7f7f83b9e700>))
+During: resolving callee type: type(CPUDispatcher(<function trace_ray at 0x7f984ecae700>))
 During: typing of call at /home/cjim02/f1tenth_gym/gym/f110_gym/envs/laser_models.py (177)
 
 
@@ -130,3 +68,5 @@ def get_scan(pose, theta_dis, fov, num_beams, theta_index_increment, sines, cosi
         # trace the current beam
         scan[i] = trace_ray(pose[0], pose[1], theta_index, sines, cosines, eps, orig_x, orig_y, orig_c, orig_s, height, width, resolution, dt, max_range)
         ^
+
+cjim02@ubuntu:~/sim_ws$
