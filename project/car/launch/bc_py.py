@@ -16,10 +16,8 @@ def generate_launch_description():
             package='project',
             executable='safety_node',
             output='screen',
-            parameters=[
-                PathJoinSubstitution([
-                    FindPackageShare('project'), 'config', 'safety_params.yaml']),
-                {'odom_topic': '/ego_racecar/odom'},
+            parameters=[PathJoinSubstitution([
+                FindPackageShare('project'), 'config', 'safety_params.yaml'])
             ],
         ),
         # BC inference node
@@ -30,7 +28,8 @@ def generate_launch_description():
             parameters=[{
                 'model_path': os.path.join(_SHARE, 'bc', 'bc_model_sim.pth'),
                 'scalers_path': os.path.join(_SHARE, 'processed', 'scalers.npz'),
-                'max_speed': 2.0,
+                'max_speed': 1.0,
+                'min_speed': 0.7,
             }],
         ),
     ])

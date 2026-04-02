@@ -11,9 +11,9 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
-from ament_index_python.packages import get_package_share_directory
 
-_SHARE = get_package_share_directory('project')
+_HOME = os.path.expanduser('~')
+_PROJECT = os.path.join(_HOME, 'f1tenth_ws', 'src', 'project')
 
 
 def generate_launch_description():
@@ -23,10 +23,8 @@ def generate_launch_description():
             package='project',
             executable='safety_node',
             output='screen',
-            parameters=[
-                PathJoinSubstitution([
-                    FindPackageShare('project'), 'config', 'safety_params.yaml']),
-                {'odom_topic': '/odom'},
+            parameters=[PathJoinSubstitution([
+                FindPackageShare('project'), 'config', 'safety_params.yaml'])
             ],
         ),
         # SAC demo node (inference only, best checkpoint)
@@ -35,8 +33,8 @@ def generate_launch_description():
             executable='sac_demo_node',
             output='screen',
             parameters=[{
-                'checkpoint_path': os.path.join(_SHARE, 'sac', 'sac_checkpoint_best.pth'),
-                'scalers_path': os.path.join(_SHARE, 'processed', 'scalers.npz'),
+                'checkpoint_path': os.path.join(_PROJECT, 'sac', 'sac_checkpoint_best.pth'),
+                'scalers_path': os.path.join(_PROJECT, 'processed', 'scalers.npz'),
                 'max_speed': 0.8,
                 'min_speed': 0.5,
             }],

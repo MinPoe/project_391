@@ -71,7 +71,7 @@ class SACDemoNode(Node):
         self.kys_sub = self.create_subscription(
             Bool, "/kys", self.kys_callback, 10)
         self.drive_pub = self.create_publisher(
-            AckermannDriveStamped, "/drive_raw", 10)
+            AckermannDriveStamped, "/drive", 10)
 
     def _str(self, n):
         return self.get_parameter(n).get_parameter_value().string_value

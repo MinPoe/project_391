@@ -166,7 +166,7 @@ class SACTrainNode(Node):
         self.kys_sub = self.create_subscription(
             Bool, "/kys", self.kys_callback, 10)
         self.drive_pub = self.create_publisher(
-            AckermannDriveStamped, "/drive_raw", 10)
+            AckermannDriveStamped, "/drive", 10)
         self.reset_pub = self.create_publisher(
             PoseWithCovarianceStamped, "/initialpose", 10)
 

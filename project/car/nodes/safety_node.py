@@ -46,14 +46,11 @@ class SafetyNode(Node):
         """
         super().__init__('safety_node')
 
-        odom_topic = self.declare_parameter(
-            'odom_topic', '/odom').value
-
-        self.drive_sub = self.create_subscription(
-            AckermannDriveStamped, '/drive_raw', self.drive_callback, 10)
+        self.drive_sub = self.create_subscription(AckermannDriveStamped, '/drive', self.drive_callback, 10)
         self.lidar_sub = self.create_subscription(LaserScan, '/scan', self.lidar_callback, 10)
-        self.velocity_sub = self.create_subscription(Odometry, odom_topic, self.velocity_callback, 10)
+        self.velocity_sub = self.create_subscription(Odometry, '/odom', self.velocity_callback, 10)
 
+        self.speed_pub = self.create_publisher(AckermannDriveStamped, '/speed', 10)
         self.kys_pub = self.create_publisher(Bool, '/kys', 10)
         self.drive_pub = self.create_publisher(AckermannDriveStamped, '/drive', 10)
 
@@ -61,17 +58,12 @@ class SafetyNode(Node):
         self.ttc_pb1 = self.declare_parameter('ttc_pb1', 1.85).value
         self.ttc_pb2 = self.declare_parameter('ttc_pb2', 1.55).value
         self.ttc_fb = self.declare_parameter('ttc_fb', 0.8).value
-        self.side_margin = self.declare_parameter('side_margin', 0.7).value
-        self.wall_steer_gain = self.declare_parameter('wall_steer_gain', 0.35).value
-        self.max_wall_steer_bias = self.declare_parameter(
-            'max_wall_steer_bias', 0.18).value
 
         self.timer = self.create_timer(0.5, self.timer_callback)
 
         self.kys = False
         self.last_vx = 0.0
         self.last_angle = 0.0
-        self.last_drive_msg = AckermannDriveStamped()
         self.sysready = False
 
         kys_msg = Bool()
@@ -85,17 +77,15 @@ class SafetyNode(Node):
         # for printing less often to free up CPU
         self.last_logged_state = None
         self.last_log_time_ns = 0
-       
-        self.get_logger().info("starting safety")
 
     def log_state(self, state: str, min_distance: float, ttc: float) -> None:
         now_ns = self.get_clock().now().nanoseconds
 
         # log immediately if state changed, otherwise at most once per second
         if state != self.last_logged_state or (now_ns - self.last_log_time_ns) >= 1_000_000_000:
-            # self.get_logger().info(
-            #     f"{state} - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s"
-            # )
+            self.get_logger().info(
+                f"{state} - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s"
+            )
             self.last_logged_state = state
             self.last_log_time_ns = now_ns
             
@@ -134,12 +124,6 @@ class SafetyNode(Node):
             ttc = min_distance / self.last_vx
 
         drive_msg = AckermannDriveStamped()
-        drive_msg.drive.steering_angle = self.last_drive_msg.drive.steering_angle
-        drive_msg.drive.speed = max(0.0, self.last_drive_msg.drive.speed)
-
-        side_bias = self._compute_wall_bias(ranges)
-        drive_msg.drive.steering_angle = np.clip(
-            drive_msg.drive.steering_angle + side_bias, -0.5, 0.5)
 
         # FB
         if min_distance < self.distance_threshold or ttc < self.ttc_fb:
@@ -156,25 +140,27 @@ class SafetyNode(Node):
 
         # PB2
         elif ttc < self.ttc_pb2:
-            drive_msg.drive.speed = min(drive_msg.drive.speed, 2.0)
+            drive_msg.drive.speed = 2.0
 
             self.log_state("PARTIAL BRAKE 2", min_distance, ttc)
 
         # PB1 
         elif ttc < self.ttc_pb1:
-            drive_msg.drive.speed = min(drive_msg.drive.speed, 2.9)
+            drive_msg.drive.speed = 2.9
 
             self.log_state("PARTIAL BRAKE 1", min_distance, ttc)
        
         # NONE
         else:
+            drive_msg.drive.speed = 4.0
+
+            # self.get_logger().info(f"NONE - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s")
             self.log_state("NONE", min_distance, ttc)
             
         if self.winding_down:
-            drive_msg.drive.speed = 0.0
+            drive_msg.drive.speed = min(drive_msg.drive.speed, 0.0)
 
-        drive_msg.drive.speed = max(0.0, drive_msg.drive.speed)
-        self.drive_pub.publish(drive_msg)
+        self.speed_pub.publish(drive_msg)
     
     def timer_callback(self) -> None:
         """
@@ -183,28 +169,13 @@ class SafetyNode(Node):
         If an emergency stop is active, checks whether the forward
         region is clear. If so, releases the stop condition.
         """
-        #if self.kys and self.ranges is not None:
-        #    danger_forward = self.ranges[len(self.ranges) // 2 - 60 : len(self.ranges) // 2 + 60]
-        #    if np.min(danger_forward) > 0.5:
-        #        self.kys = False
-        #        kys_msg = Bool()
-        #        kys_msg.data = False
-        #        self.kys_pub.publish(kys_msg)
-
-    def _compute_wall_bias(self, ranges: np.ndarray) -> float:
-        n = len(ranges)
-        left_sector = ranges[(3 * n) // 4 : (7 * n) // 8]
-        right_sector = ranges[n // 8 : n // 4]
-
-        left_clearance = float(np.min(left_sector)) if len(left_sector) > 0 else float('inf')
-        right_clearance = float(np.min(right_sector)) if len(right_sector) > 0 else float('inf')
-
-        left_push = max(0.0, self.side_margin - left_clearance)
-        right_push = max(0.0, self.side_margin - right_clearance)
-
-        # Positive steering is treated as left, so subtract when the left wall is too close.
-        bias = self.wall_steer_gain * (right_push - left_push)
-        return float(np.clip(bias, -self.max_wall_steer_bias, self.max_wall_steer_bias))
+        if self.kys and self.ranges is not None:
+            danger_forward = self.ranges[len(self.ranges) // 2 - 60 : len(self.ranges) // 2 + 60]
+            if np.min(danger_forward) > 0.5:
+                self.kys = False
+                kys_msg = Bool()
+                kys_msg.data = False
+                self.kys_pub.publish(kys_msg)
 
     def _sigint_handler(self, sig, frame):
         """
@@ -220,7 +191,7 @@ class SafetyNode(Node):
         if self.winding_down:
             rclpy.shutdown()
             return
-        # self.get_logger().info("Safety node winding down...")
+        self.get_logger().info("Safety node winding down...")
         self.winding_down = True
         threading.Timer(4.5, lambda: rclpy.shutdown()).start()  # slightly longer than gap_node           
 
@@ -234,7 +205,6 @@ class SafetyNode(Node):
         Args:
             msg (AckermannDriveStamped): Drive command message.
         """
-        self.last_drive_msg = msg
         self.last_angle = msg.drive.steering_angle
 
     def velocity_callback(self, msg:Odometry) -> None:
@@ -252,14 +222,9 @@ def main(args=None) -> None:
     """
     rclpy.init(args=args)
     safety_node = SafetyNode()
-    try:
-        rclpy.spin(safety_node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        safety_node.destroy_node()
-        if rclpy.ok():
-            rclpy.shutdown()
+    rclpy.spin(safety_node)
+    safety_node.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()   

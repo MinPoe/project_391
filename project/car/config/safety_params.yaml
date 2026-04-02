@@ -4,6 +4,3 @@ safety_node:
     ttc_pb2 : 0.7
     ttc_fb : 0.5
     distance_threshold : 0.5
-    side_margin : 0.9
-    wall_steer_gain : 0.35
-    max_wall_steer_bias : 0.18

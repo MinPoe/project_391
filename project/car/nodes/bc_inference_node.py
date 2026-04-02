@@ -1,7 +1,7 @@
 """ROS2 inference node for the Behavioural Cloning model.
 
 Subscribes to /scan (LaserScan), runs the BC model, and publishes
-AckermannDriveStamped to /drive_raw.
+AckermannDriveStamped to /drive.
 
 Usage (standalone):
     ros2 run milestone3 bc_inference_node \
@@ -36,13 +36,11 @@ class BCInferenceNode(Node):
         self.declare_parameter("scalers_path", "processed/processed_simulator/scalers.npz")
         self.declare_parameter("max_speed", 1.0)
         self.declare_parameter("min_speed", 0.5)
-        self.declare_parameter("safety_distance", 0.3)
 
         model_path = self.get_parameter("model_path").get_parameter_value().string_value
         scalers_path = self.get_parameter("scalers_path").get_parameter_value().string_value
         self.max_speed = self.get_parameter("max_speed").get_parameter_value().double_value
         self.min_speed = self.get_parameter("min_speed").get_parameter_value().double_value
-        self.safety_distance = self.get_parameter("safety_distance").get_parameter_value().double_value
 
         # Load scaler parameters from .npz (portable across numpy versions)
         scalers = np.load(scalers_path)
@@ -67,7 +65,7 @@ class BCInferenceNode(Node):
         # ROS interface
         self.scan_sub = self.create_subscription(LaserScan, "/scan", self.scan_callback, 10)
         self.kys_sub = self.create_subscription(Bool, "/kys", self.kys_callback, 10)
-        self.drive_pub = self.create_publisher(AckermannDriveStamped, "/drive_raw", 10)
+        self.drive_pub = self.create_publisher(AckermannDriveStamped, "/drive", 10)
 
     def scan_callback(self, msg: LaserScan):
         if self.stopped:
@@ -75,18 +73,6 @@ class BCInferenceNode(Node):
             return
 
         ranges = np.array(msg.ranges, dtype=np.float32)
-
-        # LiDAR-based emergency stop: check forward cone for obstacles
-#        n = len(ranges)
-#        forward_cone = ranges[n // 4 : 3 * n // 4]
-#        forward_cone = forward_cone[np.isfinite(forward_cone)]
-#        if len(forward_cone) > 0 and np.min(forward_cone) < self.safety_distance:
-#            self.get_logger().warn(
-#                f"EMERGENCY STOP: obstacle at {np.min(forward_cone):.2f}m"
-#            )
-#            self.stopped = True
-#            self._publish_stop()
-#            return
 
         # Downsample raw scan (keep every LIDAR_STEP-th ray)
         downsampled = ranges[::LIDAR_STEP]
@@ -130,8 +116,6 @@ class BCInferenceNode(Node):
         if msg.data:
             self.stopped = True
             self.get_logger().info("Emergency stop latched")
-        else:
-            self.stopped = False
 
     def _publish_stop(self):
         drive_msg = AckermannDriveStamped()
