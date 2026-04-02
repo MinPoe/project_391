@@ -1,4 +1,5 @@
-"""SAC training node (simulator).
+"""
+SAC training node (simulator).
 
 Drives the car, collects transitions, and trains actor/critics online.
 Episode boundaries come from the safety node's /kys topic. When /kys
@@ -32,11 +33,27 @@ MAX_RANGE = 10.0
 
 
 class SACTrainNode(Node):
+    """
+    This class defines the SAC training node.
 
-    def __init__(self):
+    Drives the car, collects transitions into a replay buffer, and runs
+    online SAC gradient updates. Episode boundaries are signalled by the
+    safety node via /kys.
+    """
+
+    def __init__(self) -> None:
+        """
+        Initializes the SAC training node.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         super().__init__("sac_train_node")
 
-        # ---- parameters ----
+        # Parameters
         self.declare_parameter("bc_weights_path", "")
         self.declare_parameter("scalers_path", "")
         self.declare_parameter("initial_checkpoint_path", "")
@@ -63,7 +80,7 @@ class SACTrainNode(Node):
         self.declare_parameter("reset_y", 0.0)
         self.declare_parameter("reset_yaw", 0.0)
 
-        # ---- read parameters ----
+        # Read the parameters from the launch file
         bc_weights_path = self._str("bc_weights_path")
         scalers_path = self._str("scalers_path")
         initial_checkpoint_path = self._str("initial_checkpoint_path")
@@ -90,7 +107,7 @@ class SACTrainNode(Node):
         self.reset_y = self._dbl("reset_y")
         self.reset_yaw = self._dbl("reset_yaw")
 
-        # ---- load scalers ----
+        # Load the scalers from the .npz file
         scalers = np.load(scalers_path)
         self.lidar_scale = scalers["lidar_scale"].astype(np.float32)
         self.lidar_min = scalers["lidar_min"].astype(np.float32)
@@ -99,7 +116,7 @@ class SACTrainNode(Node):
         self.num_lidar = len(self.lidar_scale)
         self.get_logger().info(f"LiDAR features: {self.num_lidar}")
 
-        # ---- build / load networks ----
+        # Build and load the networks (actor and 2 critics)
         device = "cuda" if torch.cuda.is_available() else "cpu"
         actor = SACActorNet(self.num_lidar)
         critic1 = SACCriticNet(self.num_lidar)
@@ -113,6 +130,7 @@ class SACTrainNode(Node):
 
         self.has_initial_policy = False
 
+		# Load the initial checkpoint if it exists and resume training is False
         if initial_checkpoint_path and os.path.isfile(initial_checkpoint_path):
             self.get_logger().info(
                 f"Initialising from selected checkpoint: {initial_checkpoint_path}"
@@ -135,13 +153,15 @@ class SACTrainNode(Node):
         else:
             self.get_logger().warn("No checkpoint or BC weights -- random init")
 
+        # Log the status of the training node
         self.get_logger().info(
             f"SAC TRAIN ready | deterministic={self.deterministic} device={device}"
         )
+        # Set the reference actor if the initial policy exists
         if self.has_initial_policy:
             self.trainer.set_reference_actor(self.trainer.actor)
 
-        # ---- state tracking ----
+        # State tracking
         self.prev_state = None
         self.prev_action = None
         self.prev_raw_lidar = None
@@ -158,7 +178,7 @@ class SACTrainNode(Node):
 
         self._init_log()
 
-        # ---- ROS interface ----
+        # ROS2 subscribers and publishers
         self.scan_sub = self.create_subscription(
             LaserScan, "/scan", self.scan_callback, 10)
         self.odom_sub = self.create_subscription(
@@ -170,31 +190,76 @@ class SACTrainNode(Node):
         self.reset_pub = self.create_publisher(
             PoseWithCovarianceStamped, "/initialpose", 10)
 
-    # ---- param helpers ----
-    def _str(self, n):
+    # Helper functions to get the parameters from the launch file
+    def _str(self, n) -> str:
+        """
+        Helper function to get the string value of a parameter.
+
+        Args:
+            n: The name of the parameter.
+
+        Returns:
+            The string value of the parameter.
+        """
         return self.get_parameter(n).get_parameter_value().string_value
 
-    def _dbl(self, n):
+    def _dbl(self, n) -> float:
+        """
+        Helper function to get the double value of a parameter.
+
+        Args:
+            n: The name of the parameter.
+
+        Returns:
+            The double value of the parameter.
+        """
         return self.get_parameter(n).get_parameter_value().double_value
 
-    def _int(self, n):
+    def _int(self, n) -> int:
+        """
+        Helper function to get the integer value of a parameter.
+
+        Args:
+            n: The name of the parameter.
+
+        Returns:
+            The integer value of the parameter.
+        """
         return self.get_parameter(n).get_parameter_value().integer_value
 
-    def _bool(self, n):
+    def _bool(self, n) -> bool:
+        """
+        Helper function to get the boolean value of a parameter.
+
+        Args:
+            n: The name of the parameter.
+
+        Returns:
+            The boolean value of the parameter.
+        """
         return self.get_parameter(n).get_parameter_value().bool_value
 
-    # ------------------------------------------------------------------ #
-    #  Scan callback                                                      #
-    # ------------------------------------------------------------------ #
+    def scan_callback(self, msg: LaserScan) -> None:
+        """
+        Callback function for the LaserScan topic.
 
-    def scan_callback(self, msg: LaserScan):
+        Preprocesses the LiDAR data, stores the previous transition with its
+        reward, selects an action from the policy, publishes a drive command,
+        and runs a gradient update step every update_every steps.
+
+        Args:
+            msg: The LaserScan message.
+
+        Returns:
+            None
+        """
         if self.stopped:
             self._publish_stop()
             return
 
         raw_ranges = np.array(msg.ranges, dtype=np.float32)
 
-        # --- preprocess LiDAR ---
+        # Preprocess the LiDAR data to the range [0, 1]
         ds = raw_ranges[::LIDAR_STEP]
         ds = np.where(np.isfinite(ds), ds, MAX_RANGE)
         ds = np.clip(ds, 0.0, MAX_RANGE)
@@ -206,7 +271,7 @@ class SACTrainNode(Node):
         raw_lidar = ds.copy()
         state = ds * self.lidar_scale + self.lidar_min
 
-        # --- store previous transition ---
+        # Store the previous transition with its reward
         if self.prev_state is not None:
             reward = compute_reward(
                 self.prev_raw_lidar, self.current_speed,
@@ -218,7 +283,7 @@ class SACTrainNode(Node):
             self.episode_reward += reward
             self.episode_steps += 1
 
-        # --- select action ---
+        # Select an action from the policy
         if self.step_count < self.warmup_steps:
             if self.has_initial_policy:
                 state_t = torch.from_numpy(state.reshape(1, -1)).to(
@@ -233,18 +298,18 @@ class SACTrainNode(Node):
             action = (self.trainer.actor.get_action(state_t, self.deterministic)
                       .cpu().numpy()[0])
 
-        # --- denormalise ---
+        # Denormalize the predicted steering angle and speed to the original range
         steering = float((action[0] - self.action_min[0]) / self.action_scale[0])
         speed = float((action[1] - self.action_min[1]) / self.action_scale[1])
         steering, speed = self._postprocess_action(steering, speed, raw_lidar)
 
-        # --- publish drive ---
+        # Publish the steering angle and speed
         drive_msg = AckermannDriveStamped()
         drive_msg.drive.steering_angle = steering
         drive_msg.drive.speed = speed
         self.drive_pub.publish(drive_msg)
 
-        # --- bookkeeping ---
+        # Bookkeeping
         self.prev_state = state
         self.prev_action = action
         self.prev_raw_lidar = raw_lidar
@@ -252,23 +317,22 @@ class SACTrainNode(Node):
         self.prev_steering = steering
         self.step_count += 1
 
-        # if self.step_count <= 10:
-        #     self.get_logger().info(
-        #         f"[DRIVE #{self.step_count}] steer={steering:.4f} "
-        #         f"speed={speed:.4f}")
-
-        # --- gradient step ---
+        # Run a gradient update step every update_every steps
         if self.step_count >= self.learning_starts and self.step_count % self.update_every == 0:
+            # Set the BC regularization weight to 0.0 if the BC regularization decay steps is 0
             bc_weight = 0.0
+            # Set the BC regularization weight to the BC regularization weight * the maximum of 0.0 and the difference between the current step count and the BC regularization decay steps
             if self.bc_reg_decay_steps > 0:
                 bc_weight = self.bc_reg_weight * max(
                     0.0,
                     1.0 - self.step_count / float(self.bc_reg_decay_steps),
                 )
+            # Run a gradient update step on the actor and critics
             metrics = self.trainer.update(
                 update_actor=self.step_count >= self.actor_learning_starts,
                 bc_reg_weight=bc_weight,
             )
+			# Log the metrics if the step count is a multiple of 200
             if metrics and self.step_count % 200 == 0:
                 self.get_logger().info(
                     f"[step {self.step_count}] "
@@ -278,54 +342,99 @@ class SACTrainNode(Node):
                     f"alpha={metrics['alpha']:.4f} "
                     f"bc={metrics['bc_loss']:.4f}")
 
-        # --- periodic checkpoint ---
+        # Save a checkpoint every save_every steps
         if self.step_count % self.save_every == 0:
             self.trainer.save(self.checkpoint_path)
             self.get_logger().info(
                 f"Checkpoint saved (step {self.step_count}, "
                 f"buffer {len(self.trainer.buffer)})")
 
-    # ------------------------------------------------------------------ #
-    #  Callbacks                                                          #
-    # ------------------------------------------------------------------ #
+    def odom_callback(self, msg: Odometry) -> None:
+        """
+        Callback function for the Odometry topic.
 
-    def odom_callback(self, msg: Odometry):
+        Args:
+            msg: The Odometry message.
+
+        Returns:
+            None
+        """
         self.current_speed = abs(msg.twist.twist.linear.x)
 
-    def kys_callback(self, msg: Bool):
+    def kys_callback(self, msg: Bool) -> None:
+        """
+        Callback function for the KYS topic.
+
+        Ends the episode and resets the car when the safety node latches,
+        and resumes driving when it releases.
+
+        Args:
+            msg: The Bool message.
+
+        Returns:
+            None
+        """
         if msg.data and not self.stopped:
             self.stopped = True
-            # self.get_logger().info("Emergency stop — ending episode")
             self._end_episode()
             self._reset_car()
         elif not msg.data and self.stopped:
             self.stopped = False
-            # self.get_logger().info("Safety released — new episode")
 
-    # ------------------------------------------------------------------ #
-    #  Helpers                                                            #
-    # ------------------------------------------------------------------ #
+    def _publish_stop(self) -> None:
+        """
+        Publish a stop message.
 
-    def _publish_stop(self):
+        Args:
+            None
+
+        Returns:
+            None
+        """
         msg = AckermannDriveStamped()
         msg.drive.speed = 0.0
         msg.drive.steering_angle = 0.0
         self.drive_pub.publish(msg)
 
-    def _postprocess_action(self, steering, speed, raw_lidar):
+    def _postprocess_action(self, steering, speed, raw_lidar) -> tuple[float, float]:
+        """
+        Clamp and validate the predicted steering angle and speed.
+
+        Args:
+            steering: The predicted steering angle in radians.
+            speed: The predicted speed in m/s.
+            raw_lidar: The raw LiDAR distances in meters, shape (num_rays,).
+
+        Returns:
+            A tuple of (steering, speed) clamped to valid ranges.
+        """
         if not np.isfinite(steering):
             steering = 0.0
         if not np.isfinite(speed):
             speed = self.min_speed
 
-        # Never allow reverse commands from the learned policy.
+        # Never allow reverse commands from the learned policy
         speed = max(0.0, min(speed, self.max_speed))
         if 0.0 < speed < self.min_speed:
             speed = self.min_speed
 
         return steering, speed
 
-    def _end_episode(self):
+    def _end_episode(self) -> None:
+        """
+        End the current episode, log results, and save a checkpoint.
+
+        Stores the terminal transition with done=True, increments the episode
+        counter, saves a new best checkpoint if this episode had the most steps,
+        and resets episode state.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+		# Store the terminal transition with done=True
         if self.prev_state is not None:
             reward = compute_reward(
                 self.prev_raw_lidar, 0.0, self.prev_steering, done=True,
@@ -336,7 +445,9 @@ class SACTrainNode(Node):
             self.episode_reward += reward
             self.episode_steps += 1
 
+        # Increment the episode counter
         self.episode_count += 1
+        # Log the episode results
         self.get_logger().info(
             f"Episode {self.episode_count} | "
             f"reward={self.episode_reward:.2f} "
@@ -344,6 +455,7 @@ class SACTrainNode(Node):
             f"total={self.step_count} "
             f"buffer={len(self.trainer.buffer)}")
 
+        # Save the best checkpoint if the current episode has the most steps
         if self.episode_steps > self.best_episode_steps:
             self.best_episode_steps = self.episode_steps
             best_path = self.checkpoint_path.replace('.pth', '_best.pth')
@@ -352,19 +464,30 @@ class SACTrainNode(Node):
                 f"NEW BEST (steps={self.episode_steps}, "
                 f"reward={self.episode_reward:.2f})")
 
+        # Log the episode results
         self._log_episode()
         self.trainer.save(self.checkpoint_path)
 
-        # reset episode state
+        # Reset the episode state
         self.episode_reward = 0.0
         self.episode_steps = 0
         self.prev_state = None
         self.prev_action = None
         self.prev_speed_cmd = 0.0
 
-    def _reset_car(self):
+    def _reset_car(self) -> None:
+        """
+        Reset the car to the starting pose by publishing to /initialpose.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         self._publish_stop()
 
+        # Publish the starting pose
         pose = PoseWithCovarianceStamped()
         pose.header.frame_id = "map"
         pose.header.stamp = self.get_clock().now().to_msg()
@@ -373,16 +496,35 @@ class SACTrainNode(Node):
         pose.pose.pose.orientation.z = math.sin(self.reset_yaw / 2.0)
         pose.pose.pose.orientation.w = math.cos(self.reset_yaw / 2.0)
         self.reset_pub.publish(pose)
-        # self.get_logger().info("Car reset to starting pose")
 
-    def _init_log(self):
+    def _init_log(self) -> None:
+        """
+        Initialize the training log CSV file with a header row.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
         os.makedirs(os.path.dirname(self.log_path) or ".", exist_ok=True)
+        # Create the training log CSV file if it doesn't exist
         if not os.path.isfile(self.log_path):
             with open(self.log_path, "w", newline="") as f:
                 csv.writer(f).writerow([
                     "episode", "reward", "steps", "total_steps", "buffer_size"])
 
-    def _log_episode(self):
+    def _log_episode(self) -> None:
+        """
+        Append the current episode results to the training log CSV.
+
+        Args:
+            None
+
+        Returns:
+            None
+        """
+        # Append the current episode results to the training log CSV
         with open(self.log_path, "a", newline="") as f:
             csv.writer(f).writerow([
                 self.episode_count,
@@ -392,7 +534,16 @@ class SACTrainNode(Node):
                 len(self.trainer.buffer)])
 
 
-def main(args=None):
+def main(args=None) -> None:
+    """
+    Main function to initialize the ROS2 node.
+
+    Args:
+        args: The arguments.
+
+    Returns:
+        None
+    """
     rclpy.init(args=args)
     node = SACTrainNode()
     try:

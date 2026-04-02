@@ -1,7 +1,10 @@
-"""SAC training launch (simulator).
+"""
+SAC training launch (simulator).
 
 Paths: ~/sim_ws/src/Project_C10/project/...
+Runs the SAC training with the safety node.
 
+Launch:
     ros2 launch project sac_train_py.py
 """
 import os
@@ -12,11 +15,19 @@ from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 
+# Get the share directory and source directory
 _SHARE = get_package_share_directory('project')
 _SRC = os.path.join(os.path.expanduser('~'), 'f1tenth_ws', 'src', 'project')
 
 
-def generate_launch_description():
+def generate_launch_description() -> LaunchDescription:
+    """
+    Generate the launch description for the SAC training.
+
+    Returns:
+        The launch description.
+    """
+    # Return the launch description
     return LaunchDescription([
         # safety node
         Node(

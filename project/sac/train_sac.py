@@ -8,11 +8,9 @@ Can also be run standalone to initialise a checkpoint from BC weights:
 """
 
 from __future__ import annotations
-
 import argparse
 import copy
 import os
-
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -31,7 +29,18 @@ except ImportError:
 class ReplayBuffer:
     """Fixed-capacity circular replay buffer backed by pre-allocated numpy arrays."""
 
-    def __init__(self, capacity: int, state_dim: int, action_dim: int):
+    def __init__(self, capacity: int, state_dim: int, action_dim: int) -> None:
+        """
+        Initializes the replay buffer with pre-allocated numpy arrays.
+
+        Args:
+            capacity: Maximum number of transitions to store.
+            state_dim: Dimension of the state vector.
+            action_dim: Dimension of the action vector.
+
+        Returns:
+            None
+        """
         self.capacity = capacity
         self.states = np.zeros((capacity, state_dim), dtype=np.float32)
         self.actions = np.zeros((capacity, action_dim), dtype=np.float32)
@@ -41,7 +50,20 @@ class ReplayBuffer:
         self.ptr = 0
         self.size = 0
 
-    def push(self, state, action, reward, next_state, done):
+    def push(self, state, action, reward, next_state, done) -> None:
+        """
+        Store a single transition, overwriting old entries if the buffer is full.
+
+        Args:
+            state: The current state.
+            action: The action taken.
+            reward: The reward received.
+            next_state: The next state.
+            done: Whether the episode ended.
+
+        Returns:
+            None
+        """
         self.states[self.ptr] = state
         self.actions[self.ptr] = action
         self.rewards[self.ptr] = reward
@@ -50,7 +72,16 @@ class ReplayBuffer:
         self.ptr = (self.ptr + 1) % self.capacity
         self.size = min(self.size + 1, self.capacity)
 
-    def sample(self, batch_size: int):
+    def sample(self, batch_size: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Sample a random batch of transitions.
+
+        Args:
+            batch_size: The number of transitions to sample.
+
+        Returns:
+            A tuple of (states, actions, rewards, next_states, dones) as numpy arrays.
+        """
         idx = np.random.randint(0, self.size, size=batch_size)
         return (
             self.states[idx],
@@ -60,7 +91,13 @@ class ReplayBuffer:
             self.dones[idx],
         )
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """
+        Return the number of transitions currently stored.
+
+        Returns:
+            The number of stored transitions.
+        """
         return self.size
 
 
@@ -88,7 +125,29 @@ class SACTrainer:
         batch_size: int = 256,
         target_entropy: float | None = None,
         device: str = "cpu",
-    ):
+    ) -> None:
+        """
+        Initializes the SAC trainer with networks, optimizers, and replay buffer.
+
+        Args:
+            actor: The actor network.
+            critic1: The first critic network.
+            critic2: The second critic network.
+            state_dim: Dimension of the state vector.
+            action_dim: Dimension of the action vector.
+            lr_actor: Learning rate for the actor.
+            lr_critic: Learning rate for both critics.
+            lr_alpha: Learning rate for the entropy temperature.
+            gamma: Discount factor.
+            tau: Polyak averaging coefficient for target network updates.
+            buffer_size: Maximum replay buffer capacity.
+            batch_size: Number of transitions per gradient step.
+            target_entropy: Target entropy for auto-tuning alpha. Defaults to -action_dim.
+            device: The device to run training on.
+
+        Returns:
+            None
+        """
         self.device = torch.device(device)
         self.gamma = gamma
         self.tau = tau
@@ -126,19 +185,41 @@ class SACTrainer:
 
     # ---- properties ----
     @property
-    def alpha(self):
+    def alpha(self) -> float:
+        """Current entropy temperature (exponentiated log_alpha)."""
         return self.log_alpha.exp().item()
 
     # ---- buffer helpers ----
-    def store(self, state, action, reward, next_state, done):
+    def store(self, state, action, reward, next_state, done) -> None:
+        """
+        Push a transition into the replay buffer.
+
+        Args:
+            state: The current state.
+            action: The action taken.
+            reward: The reward received.
+            next_state: The next state.
+            done: Whether the episode ended.
+
+        Returns:
+            None
+        """
         self.buffer.push(state, action, reward, next_state, done)
 
     def ready(self) -> bool:
         """True when the buffer has enough samples for one batch."""
         return len(self.buffer) >= self.batch_size
 
-    def set_reference_actor(self, actor: SACActorNet | None):
-        """Freeze a reference policy used for BC-style regularization."""
+    def set_reference_actor(self, actor: SACActorNet | None) -> None:
+        """
+        Freeze a reference policy used for BC-style regularization.
+
+        Args:
+            actor: The actor to use as reference. Pass None to disable.
+
+        Returns:
+            None
+        """
         if actor is None:
             self.reference_actor = None
             return
@@ -154,7 +235,16 @@ class SACTrainer:
         update_actor: bool = True,
         bc_reg_weight: float = 0.0,
     ) -> dict | None:
-        """Run one gradient step on all networks. Returns metrics dict or None."""
+        """
+        Run one gradient step on all networks.
+
+        Args:
+            update_actor: If True, update the actor and entropy temperature.
+            bc_reg_weight: Weight for the BC regularization loss. Set to 0 to disable.
+
+        Returns:
+            A dict of training metrics, or None if the buffer is not ready.
+        """
         if not self.ready():
             return None
 
@@ -256,7 +346,16 @@ class SACTrainer:
         }
 
     # ---- checkpoint I/O ----
-    def save(self, path: str):
+    def save(self, path: str) -> None:
+        """
+        Save all network weights and optimizer states to a checkpoint file.
+
+        Args:
+            path: The output .pth file path.
+
+        Returns:
+            None
+        """
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         torch.save(
             {
@@ -275,7 +374,16 @@ class SACTrainer:
             path,
         )
 
-    def load(self, path: str):
+    def load(self, path: str) -> None:
+        """
+        Load all network weights and optimizer states from a checkpoint file.
+
+        Args:
+            path: The .pth checkpoint file path.
+
+        Returns:
+            None
+        """
         ckpt = torch.load(path, map_location=self.device, weights_only=True)
         self.actor.load_state_dict(ckpt["actor"])
         self.critic1.load_state_dict(ckpt["critic1"])

@@ -1,3 +1,10 @@
+"""
+Reward function for SAC training on the F1Tenth car.
+
+Called every step by sac_train_node to compute the reward signal
+from raw LiDAR ranges, speed, steering angle, and crash flag.
+"""
+
 import numpy as np
 
 
@@ -23,21 +30,21 @@ def compute_reward(
     """
     reward = 0.0
 
-    # 1. Survival bonus -- reward staying alive
+    # 1. Survival bonus: reward for staying alive
     reward += 0.1
 
-    # 2. Forward progress -- encourage speed
+    # 2. Forward progress: encourage speed
     reward += speed * 0.1
 
-    # 3. Wall proximity -- penalise being close to obstacles
+    # 3. Wall proximity: penalise being close to obstacles
     min_range = float(np.min(lidar_ranges))
     if min_range < 0.5:
         reward -= (0.5 - min_range) * 2.0
 
-    # 4. Steering smoothness -- penalise jerk (change), NOT absolute steering
+    # 4. Steering smoothness: penalise jerk (change), NOT absolute steering
     reward -= 0.8 * abs(steering_angle - prev_steering)
 
-    # 5. Crash penalty
+    # 5. Crash penalty: penalise crashing
     if done:
         reward -= 50.0
 

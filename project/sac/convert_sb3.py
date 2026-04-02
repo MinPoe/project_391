@@ -1,4 +1,5 @@
-"""Convert a stable-baselines3 SAC model to a custom SAC checkpoint.
+"""
+Convert a stable-baselines3 SAC model to a custom SAC checkpoint.
 
 Usage (run on the Linux VM where SB3 and the model exist):
     python convert_sb3.py --sb3-path ~/rl_models/sac_final.zip \
@@ -24,9 +25,22 @@ except ImportError:
     from train_sac import SACTrainer
 
 
-def convert(sb3_path: str, out_path: str, num_lidar: int = 181):
+def convert(sb3_path: str, out_path: str, num_lidar: int = 181) -> None:
+    """
+    Convert a stable-baselines3 SAC checkpoint to our custom format.
+
+    Args:
+        sb3_path: Path to the SB3 .zip model file.
+        out_path: Output path for the converted .pth checkpoint.
+        num_lidar: Number of LiDAR rays (input features).
+
+    Returns:
+        None
+    """
+    # Import the SB3 SAC model
     from stable_baselines3 import SAC as SB3_SAC
 
+    # Print the loading message
     print(f"Loading SB3 model from {sb3_path} ...")
     sb3_model = SB3_SAC.load(sb3_path, device="cpu")
     sd = sb3_model.policy.state_dict()
@@ -36,22 +50,22 @@ def convert(sb3_path: str, out_path: str, num_lidar: int = 181):
     for k, v in sd.items():
         print(f"  {k:50s} {tuple(v.shape)}")
 
-    # ---- actor ----
+    # Initialize the actor network
     # SB3 actor: latent_pi.0 (in→256), latent_pi.2 (256→256), mu (256→2), log_std (2,)
     actor = SACActorNet(num_lidar, action_dim=2, hidden1=256, hidden2=256)
+    # Copy the weights to the actor network
     actor.fc1.weight.data.copy_(sd["actor.latent_pi.0.weight"])
     actor.fc1.bias.data.copy_(sd["actor.latent_pi.0.bias"])
     actor.fc2.weight.data.copy_(sd["actor.latent_pi.2.weight"])
     actor.fc2.bias.data.copy_(sd["actor.latent_pi.2.bias"])
     actor.mean_head.weight.data.copy_(sd["actor.mu.weight"])
     actor.mean_head.bias.data.copy_(sd["actor.mu.bias"])
-    # SB3 log_std is a single parameter (not per-state). Map to our
-    # log_std_head by zeroing weights and putting the values in bias.
+    # Initialize the log standard deviation head
     nn.init.constant_(actor.log_std_head.weight, 0.0)
     actor.log_std_head.bias.data.copy_(sd["actor.log_std"])
     print("Actor weights copied.")
 
-    # ---- critics ----
+    # Initialize the critic networks
     # SB3 critic: qf0.{0,2,4} and qf1.{0,2,4}
     critic1 = SACCriticNet(num_lidar, action_dim=2, hidden1=256, hidden2=256)
     critic1.net[0].weight.data.copy_(sd["critic.qf0.0.weight"])
@@ -70,7 +84,7 @@ def convert(sb3_path: str, out_path: str, num_lidar: int = 181):
     critic2.net[4].bias.data.copy_(sd["critic.qf1.4.bias"])
     print("Critic weights copied.")
 
-    # ---- build trainer and save ----
+    # Initialize the trainer
     trainer = SACTrainer(
         actor, critic1, critic2,
         state_dim=num_lidar, action_dim=2,
@@ -78,6 +92,7 @@ def convert(sb3_path: str, out_path: str, num_lidar: int = 181):
     )
 
     # Copy target critics from SB3
+    # Copy the weights to the target critic networks
     trainer.target_critic1.net[0].weight.data.copy_(sd["critic_target.qf0.0.weight"])
     trainer.target_critic1.net[0].bias.data.copy_(sd["critic_target.qf0.0.bias"])
     trainer.target_critic1.net[2].weight.data.copy_(sd["critic_target.qf0.2.weight"])

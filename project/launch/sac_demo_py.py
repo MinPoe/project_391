@@ -1,8 +1,10 @@
-"""SAC demo launch (physical car).
+"""
+SAC demo launch (physical car).
 
-Paths: ~/sim_ws/src/Project_C10/project/...
-Runs the best checkpoint with the safety node. No training.
+Paths: ~/f1tenth_ws/src/project/...
+Runs the best checkpoint with the safety node. No training. This file is designed to be used with the physical car.
 
+Launch:
     ros2 launch project sac_demo_py.py
 """
 import os
@@ -13,10 +15,21 @@ from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 
+# Get the share directory
 _SHARE = get_package_share_directory('project')
 
 
-def generate_launch_description():
+def generate_launch_description() -> LaunchDescription:
+    """
+    Generate the launch description for the SAC demo.
+
+    Args:
+        None
+
+    Returns:
+        The launch description.
+    """
+    # Return the launch description
     return LaunchDescription([
         # safety node
         Node(
@@ -26,7 +39,7 @@ def generate_launch_description():
             parameters=[
                 PathJoinSubstitution([
                     FindPackageShare('project'), 'config', 'safety_params.yaml']),
-                {'odom_topic': '/odom'},
+                {'odom_topic': '/odom'}, # Can change this to /ego_racecar/odom if using simulator
             ],
         ),
         # SAC demo node (inference only, best checkpoint)
@@ -35,7 +48,7 @@ def generate_launch_description():
             executable='sac_demo_node',
             output='screen',
             parameters=[{
-                'checkpoint_path': os.path.join(_SHARE, 'sac', 'sac_checkpoint_best.pth'),
+                'checkpoint_path': os.path.join(_SHARE, 'sac', 'sac_checkpoint_best.pth'), # Load the best checkpoint
                 'scalers_path': os.path.join(_SHARE, 'processed', 'scalers.npz'),
                 'max_speed': 0.8,
                 'min_speed': 0.5,
