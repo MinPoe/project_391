@@ -93,9 +93,9 @@ class SafetyNode(Node):
 
         # log immediately if state changed, otherwise at most once per second
         if state != self.last_logged_state or (now_ns - self.last_log_time_ns) >= 1_000_000_000:
-            # self.get_logger().info(
-            #     f"{state} - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s"
-            # )
+            self.get_logger().info(
+                f"{state} - Distance: {min_distance:.2f}m, TTC: {ttc:.2f}s"
+            )
             self.last_logged_state = state
             self.last_log_time_ns = now_ns
             
@@ -220,7 +220,7 @@ class SafetyNode(Node):
         if self.winding_down:
             rclpy.shutdown()
             return
-        # self.get_logger().info("Safety node winding down...")
+        self.get_logger().info("Safety node winding down...")
         self.winding_down = True
         threading.Timer(4.5, lambda: rclpy.shutdown()).start()  # slightly longer than gap_node           
 

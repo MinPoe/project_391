@@ -15,13 +15,10 @@ from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 
-# Get the share directory
-_SHARE = get_package_share_directory('project')
 
-
-def generate_launch_description() -> LaunchDescription:
-    """
-    Generate the launch description for the SAC demo.
+def generate_launch_description():
+    """ 
+    Generate the launch description for the SAC demo node.
 
     Args:
         None
@@ -29,7 +26,8 @@ def generate_launch_description() -> LaunchDescription:
     Returns:
         The launch description.
     """
-    # Return the launch description
+    share = get_package_share_directory('project')
+
     return LaunchDescription([
         # safety node
         Node(
@@ -39,7 +37,7 @@ def generate_launch_description() -> LaunchDescription:
             parameters=[
                 PathJoinSubstitution([
                     FindPackageShare('project'), 'config', 'safety_params.yaml']),
-                {'odom_topic': '/odom'}, # Can change this to /ego_racecar/odom if using simulator
+                {'odom_topic': '/odom'},
             ],
         ),
         # SAC demo node (inference only, best checkpoint)
@@ -48,10 +46,10 @@ def generate_launch_description() -> LaunchDescription:
             executable='sac_demo_node',
             output='screen',
             parameters=[{
-                'checkpoint_path': os.path.join(_SHARE, 'sac', 'sac_checkpoint_best.pth'), # Load the best checkpoint
-                'scalers_path': os.path.join(_SHARE, 'processed', 'scalers.npz'),
-                'max_speed': 0.8,
-                'min_speed': 0.5,
+                'checkpoint_path': os.path.join(share, 'sac', 'sac_checkpoint_best.pth'),
+                'scalers_path': os.path.join(share, 'processed', 'scalers.npz'),
+                'max_speed': 1.0,
+                'min_speed': 0.7,
             }],
         ),
     ])

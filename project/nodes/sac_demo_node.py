@@ -15,6 +15,7 @@ Runs the SAC demo node with the safety node.
 Launch:
     ros2 launch project sac_demo_py.py
 """
+from __future__ import annotations
 
 import numpy as np
 import torch

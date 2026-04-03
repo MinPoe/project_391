@@ -8,6 +8,7 @@ and writes one row per scan to a CSV file.
 Usage:
     python preprocessing/bag_to_csv.py --bag data/my_bag --output training_data.csv --max-time-diff 50
 """
+from __future__ import annotations
 
 import argparse
 import csv

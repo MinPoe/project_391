@@ -3,6 +3,7 @@
 Usage:
     python bc/train.py --data processed/processed_simulator/data.csv --epochs 100 --batch-size 256 --lr 1e-3 --out bc/bc_model.pth
 """
+from __future__ import annotations
 
 import argparse
 import os

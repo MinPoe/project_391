@@ -4,6 +4,7 @@ SAC actor and critic networks for the F1Tenth car.
 Contains SACActorNet (Gaussian policy with tanh squashing) and
 SACCriticNet (Q-function). Imported by sac_train_node and sac_demo_node.
 """
+from __future__ import annotations
 
 import torch
 import torch.nn as nn

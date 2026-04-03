@@ -45,7 +45,8 @@ def generate_launch_description() -> LaunchDescription:
             parameters=[{
                 'model_path': os.path.join(_SHARE, 'bc', 'bc_model.pth'), # Load the BC model
                 'scalers_path': os.path.join(_SHARE, 'processed', 'scalers.npz'), # Load the scalers
-                'max_speed': 2.0,
+                'max_speed': 1.0,
+                'min_speed': 0.7,
             }],
         ),
     ])

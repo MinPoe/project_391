@@ -8,6 +8,7 @@ Usage:
     pip install pandas scikit-learn joblib
     python preprocessing/preprocess.py
 """
+from __future__ import annotations
 
 import os
 import sys
